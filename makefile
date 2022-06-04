@@ -45,6 +45,8 @@ $(shell test -f previous_build/0hana-main.c && mv previous_build/0hana-main.c bu
 $(shell rm -r   previous_build \
   $(if \
     $(shell find previous_build \( -name '*.[dios]' -o -name '*.[dios]pp' \)), \
+    $(info Removing build/0hana-main.c to ensure consistency with removed or renamed source files) \
+    $(info ) \
     && rm -f build/0hana-main.c \
   ) \
 )
@@ -63,17 +65,31 @@ clean:
 
 # General build instructions
 build/0hana-main: $(object_files) build/0hana-main.c
-	@echo 'testing pseudo-$(@) generation'
+	@echo 'Pseudo-generation of $(@)'
 	@touch $(@)
 
-build/%.o:   source/%.c
-	@echo 'testing $(@) generation'
+build/%.o: source/%.c build/%.d
+	@echo '- Mechanizing : $(<) -> $(@)'
 	@gcc  $(CFLAGS)  $(<) -o $(@) -c
 
-build/%.opp: source/%.cpp
-	@echo 'testing $(@) generation'
+build/%.d: source/%.c
+	@echo '- Prescanning : $(<) -> $(@)'
+	@# Create additional makefile target dependencies for build/%.o files
+	@# so that if their #include "files" are updated, they will be remade
+	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.d=.o)
+
+build/%.opp: source/%.cpp build/%.dpp
+	@echo '- Mechanizing : $(<) -> $(@)'
 	@g++ $(CPPFLAGS) $(<) -o $(@) -c
 
+build/%.dpp: source/%.cpp
+	@echo '- Prescanning : $(<) -> $(@)'
+	@# Create additional makefile target dependencies for build/%.opp files
+	@# so that if their #include "files" are updated, they will be remade
+	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.dpp=.opp)
+
 build/0hana-main.c: $(object_files)
-	@echo 'testing pseudo-$(@) generation'
+	@echo 'Pseudo-generation of $(@)'
 	@touch $(@)
+
+-include $(filter %.d %.dpp, $(target_files))
