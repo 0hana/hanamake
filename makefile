@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
 
-.PHONY: makeshift
+.PHONY: clean run
 
 # Identify target files
 source_files := \
@@ -40,16 +40,40 @@ $(shell mkdir -p $(target_directories))
 
 # Transfer existing target files to current build
 $(foreach target, $(target_files), $(shell test -e 'previous_$(target)' && mv 'previous_$(target)' '$(target)'))
-$(shell test -f previous_build/0hana_main   && mv previous_build/0hana_main   build/0hana_main)
-$(shell test -f previous_build/0hana_main.c && mv previous_build/0hana_main.c build/0hana_main.c)
+$(shell test -f previous_build/0hana-main   && mv previous_build/0hana-main   build/0hana-main)
+$(shell test -f previous_build/0hana-main.c && mv previous_build/0hana-main.c build/0hana-main.c)
 $(shell rm -r   previous_build \
   $(if \
     $(shell find previous_build \( -name '*.[dios]' -o -name '*.[dios]pp' \)), \
-    && rm -f build/0hana_main.c \
+    && rm -f build/0hana-main.c \
   ) \
 )
 
-makeshift:
-	@touch $(target_files)
-	@echo 'makeshift system generated build directory:'
-	@find build
+# Negate make target assumptions
+.SUFFIXES:
+CFLAGS   := -g -Wall -Wextra -Wpedantic
+CPPFLAGS := -g -Wall -Wextra -Wpedantic
+
+# Execute
+run: build/0hana-main
+	@echo 'generated build structure:' && tree build && echo 'vs' && tree source
+
+clean:
+	@rm -r build && echo 'All build files removed.'
+
+# General build instructions
+build/0hana-main: $(object_files) build/0hana-main.c
+	@echo 'testing pseudo-$(@) generation'
+	@touch $(@)
+
+build/%.o:   source/%.c
+	@echo 'testing $(@) generation'
+	@gcc  $(CFLAGS)  $(<) -o $(@) -c
+
+build/%.opp: source/%.cpp
+	@echo 'testing $(@) generation'
+	@g++ $(CPPFLAGS) $(<) -o $(@) -c
+
+build/0hana-main.c: $(object_files)
+	@echo 'testing pseudo-$(@) generation'
+	@touch $(@)
