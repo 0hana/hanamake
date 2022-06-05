@@ -96,8 +96,37 @@ build/%.dpp: source/%.cpp
 	@# so that if their #include "files" are updated, they will be remade
 	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.dpp=.spp)
 
-build/0hana-main.c: $(object_files)
+build/0hana-main.c: $(filter %.i %.ipp, $(target_files))
 	@echo 'Pseudo-generation of $(@)'
 	@touch $(@)
+
+# Until a robust and reliable method is made to identify meaningful
+# object changes between assembly files, the "one-function one-file"
+# approach is only known way to generally achieve re-test minimization.
+#
+# In the meantime, remove and remake build/%.i(pp) directories per source update
+remove_and_remake_script = \
+  echo '- Subdividing : $(<) -> $(@)'; rm -rf $(@) && mkdir $(@)
+
+# Split build/%.s(pp) files into partial assembly files under build/%.i(pp)
+csplit_script = \
+  csplit --prefix='$(@)/csplit_' --suffix-format='%%_%i.x' --silent $(<) \
+  $$(echo \
+    $$(grep      '^[_A-Za-z0-9$$][_A-Za-z0-9$$]*:$$' $(<) \
+      | sed  's/\(^[_A-Za-z0-9$$][_A-Za-z0-9$$]*:$$\)/\/^\1$$\//' \
+      ) \
+    | sed 's/\/\(\^[_A-Za-z0-9$$][_A-Za-z0-9$$]*:\$$\)\//%\1%/' \
+    ) \
+  ; for csplit_file in $(@)/csplit_*.x \
+  ; do mv $${csplit_file} "$(@)/$$(head -n 1 $${csplit_file} | sed 's/://')" \
+  ; done
+
+build/%.i: build/%.s
+	@$(remove_and_remake_script)
+	@$(csplit_script)
+
+build/%.ipp: build/%.spp
+	@$(remove_and_remake_script)
+	@$(csplit_script)
 
 -include $(filter %.d %.dpp, $(target_files))
