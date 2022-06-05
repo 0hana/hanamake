@@ -53,8 +53,8 @@ $(shell rm -r   previous_build \
 
 # Negate make target assumptions
 .SUFFIXES:
-CFLAGS   := -g -Wall -Wextra -Wpedantic
-CPPFLAGS := -g -Wall -Wextra -Wpedantic
+CFLAGS   := -x c   -g -Wall -Wextra -Wpedantic
+CPPFLAGS := -x c++ -g -Wall -Wextra -Wpedantic
 
 # Execute
 run: build/0hana-main
@@ -68,25 +68,33 @@ build/0hana-main: $(object_files) build/0hana-main.c
 	@echo 'Pseudo-generation of $(@)'
 	@touch $(@)
 
-build/%.o: source/%.c build/%.d
+build/%.o: build/%.s
 	@echo '- Mechanizing : $(<) -> $(@)'
-	@gcc  $(CFLAGS)  $(<) -o $(@) -c
+	@gcc   -x assembler    $(<) -o $(@) -c
+
+build/%.s: source/%.c build/%.d
+	@echo '- Translating : $(<) -> $(@)'
+	@gcc      $(CFLAGS)    $(<) -o $(@) -S
 
 build/%.d: source/%.c
 	@echo '- Prescanning : $(<) -> $(@)'
-	@# Create additional makefile target dependencies for build/%.o files
+	@# Create additional makefile target dependencies for build/%.s files
 	@# so that if their #include "files" are updated, they will be remade
-	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.d=.o)
+	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.d=.s)
 
-build/%.opp: source/%.cpp build/%.dpp
+build/%.opp: build/%.spp
 	@echo '- Mechanizing : $(<) -> $(@)'
-	@g++ $(CPPFLAGS) $(<) -o $(@) -c
+	@g++   -x assembler    $(<) -o $(@) -c
+
+build/%.spp: source/%.cpp build/%.dpp
+	@echo '- Translating : $(<) -> $(@)'
+	@g++     $(CPPFLAGS)   $(<) -o $(@) -S
 
 build/%.dpp: source/%.cpp
 	@echo '- Prescanning : $(<) -> $(@)'
-	@# Create additional makefile target dependencies for build/%.opp files
+	@# Create additional makefile target dependencies for build/%.spp files
 	@# so that if their #include "files" are updated, they will be remade
-	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.dpp=.opp)
+	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.dpp=.spp)
 
 build/0hana-main.c: $(object_files)
 	@echo 'Pseudo-generation of $(@)'
