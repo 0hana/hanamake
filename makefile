@@ -97,8 +97,8 @@ build/%.dpp: source/%.cpp
 	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.dpp=.spp)
 
 build/0hana-main.c: $(filter %.i %.ipp, $(target_files))
-	@echo 'Pseudo-generation of $(@)'
-	@touch $(@)
+	@echo '- Formulating : $(@)'
+	@sh      formulating.sh        $(@)
 
 # Until a robust and reliable method is made to identify meaningful
 # object changes between assembly files, the "one-function one-file"
