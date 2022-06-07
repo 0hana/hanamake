@@ -36,3 +36,20 @@
    You should have received a copy of the GNU Affero General Public License
    along with hanamake. If not, see <https://www.gnu.org/licenses/>. */
 "
+
+# Insert system header files
+>>${1} echo \
+"\
+#include <stdio.h>
+"
+
+# Insert unit test declarations
+test_names="$(basename -a ${2} | grep '^\$hanamake_test\$')"
+for name in ${test_names}
+do
+>>${1} echo "void ${name}"
+>>${1} echo '( FILE      ** const $hanamake_test$log_file'
+>>${1} echo ', char const * const $hanamake_test$log_path'
+>>${1} echo ') ;'
+>>${1} echo
+done
