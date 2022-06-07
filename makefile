@@ -98,7 +98,18 @@ build/%.dpp: source/%.cpp
 
 build/0hana-main.c: $(filter %.i %.ipp, $(target_files))
 	@echo '- Formulating : $(@)'
-	@sh      formulating.sh        $(@)
+	@sh      formulating.sh        $(@) \
+	"\
+	$$(for directory in $(^)\
+	  ; do :\
+	    ; for file in $$(ls -1A $${directory} | grep -v '.log$$')\
+	    ; do echo "$${file}/$${directory}/$${file}"\
+	    ; done\
+	  ; done\
+	  | LC_COLLATE=C sort -k1 -t/\
+	  | sed 's/^[$$0-9A-Z_a-z][$$0-9A-Z_a-z]*\///'\
+	  )\
+	"
 
 # Until a robust and reliable method is made to identify meaningful
 # object changes between assembly files, the "one-function one-file"
