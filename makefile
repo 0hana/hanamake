@@ -68,6 +68,31 @@ build/0hana-main: $(object_files) build/0hana-main.c
 	@echo 'Pseudo-generation of $(@)'
 	@touch $(@)
 
+hanamake_test_parameters := \
+  FILE      ** const $$hanamake_test$$log_file, \
+  char const * const $$hanamake_test$$log_path
+
+hanamake_assert_definition := \
+  (expression) \
+  ? \
+  ( ((void)((*$$hanamake_test$$log_file == NULL) && remove($$hanamake_test$$log_path))), 1 ) \
+  : \
+  ( \
+    ( \
+      (void) \
+      ( \
+        (*$$hanamake_test$$log_file == NULL) && \
+        (*$$hanamake_test$$log_file = fopen($$hanamake_test$$log_path, "a")) && \
+        (fprintf(*$$hanamake_test$$log_file, __FILE__ ": Failed assert(s):\n")) \
+      ) \
+    ) \
+    , fprintf(*$$hanamake_test$$log_file, "Line   \#  %i : (" \#expression ")\n", __LINE__) \
+    __VA_OPT__(, \
+      fprintf(*$$hanamake_test$$log_file, "Context:  " __VA_ARGS__), fprintf(*$$hanamake_test$$log_file, "\n\n") \
+    ) \
+    , 0 \
+  )
+
 build/%.o: build/%.s
 	@echo '- Mechanizing : $(<) -> $(@)'
 	@gcc   -x assembler    $(<) -o $(@) -c
