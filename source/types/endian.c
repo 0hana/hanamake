@@ -32,3 +32,46 @@ void endian_mirror
     *datum++       = X;
   }
 }
+
+#ifdef hanamake_test
+hanamake_test(endian_mirror)
+{
+  { byte Byte = /*-------*/ 0x12
+  ; endian_mirror(sizeof(Byte), &(Byte))
+  ; hanamake_assert(Byte == 0x12)
+  ;
+  }
+  { uint16_t Word = /*---*/ 0x1234
+  ; endian_mirror(sizeof(Word), (byte*)&(Word))
+  ; hanamake_assert(Word == 0x3412)
+  ;
+  }
+  { uint32_t Dword = /*---*/ 0x12345678
+  ; endian_mirror(sizeof(Dword), (byte*)&(Dword))
+  ; hanamake_assert(Dword == 0x78563412)
+  ;
+  }
+  { uint64_t Qword = /*---*/ 0x12345678AABBCCDD
+  ; endian_mirror(sizeof(Qword), (byte*)&(Qword))
+  ; hanamake_assert(Qword == 0xDDCCBBAA78563412)
+  ;
+  }
+  { char Cstring[] = "Hello World!"
+  ; endian_mirror(sizeof(Cstring), (byte*)Cstring)
+  ; hanamake_assert(Cstring[ 0] == '\0')
+  ; hanamake_assert(Cstring[ 1] ==  '!')
+  ; hanamake_assert(Cstring[ 2] ==  'd')
+  ; hanamake_assert(Cstring[ 3] ==  'l')
+  ; hanamake_assert(Cstring[ 4] ==  'r')
+  ; hanamake_assert(Cstring[ 5] ==  'o')
+  ; hanamake_assert(Cstring[ 6] ==  'W')
+  ; hanamake_assert(Cstring[ 7] ==  ' ')
+  ; hanamake_assert(Cstring[ 8] ==  'o')
+  ; hanamake_assert(Cstring[ 9] ==  'l')
+  ; hanamake_assert(Cstring[10] ==  'l')
+  ; hanamake_assert(Cstring[11] ==  'e')
+  ; hanamake_assert(Cstring[12] ==  'H')
+  ;
+  }
+}
+#endif//test
