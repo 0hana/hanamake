@@ -167,8 +167,12 @@ csplit_script = \
       ) \
     | sed 's/\/\(\^[_A-Za-z0-9$$][_A-Za-z0-9$$]*:\$$\)\//%\1%/' \
     ) \
-  ; for csplit_file in $(@)/csplit_*.x \
-  ; do mv $${csplit_file} "$(@)/$$(head -n 1 $${csplit_file} | sed 's/://')" \
+  ; for csplit_file in   $(@)/csplit_*.x \
+  ; do code_object_path="$(@)/$$(head -n 1 $${csplit_file} | sed 's/://')" \
+  \
+    ; mv $${csplit_file} $${code_object_path} \
+    ; touch $${code_object_path}.log \
+  \
   ; done
 
 build/%.i: build/%.s
