@@ -63,11 +63,7 @@ run: build/0hana-main
 clean:
 	@rm -r build && echo 'All build files removed.'
 
-# General build instructions
-build/0hana-main: $(object_files) build/0hana-main.c
-	@echo 'Pseudo-generation of $(@)'
-	@touch $(@)
-
+# Special build variables
 hanamake_test_parameters := \
   FILE      ** const $$hanamake_test$$log_file, \
   char const * const $$hanamake_test$$log_path
@@ -93,13 +89,31 @@ hanamake_assert_definition := \
     , 0 \
   )
 
+# The first  gcc checks to see if the user is missing #include <stdio.h>
+# The second gcc includes <stdio.h> and defines the hanamake macros in .c(pp)
+ASM_INCLUSIONS = \
+  -Wno-unused-value \
+  -D'hanamake_test(test_name)=$(if $(filter %.spp,$(<)), extern "C") \
+     void $$hanamake_test$$\#\#test_name(void)' \
+  -D'hanamake_assert(expression, ...)=(0)'; \
+  $(if $(filter %.spp, $(<)), g++ $(CPPFLAGS), gcc $(CFLAGS)) $(<) -o $(@) -S \
+  -include /usr/include/stdio.h \
+  -D'hanamake_test(test_name)=$(if $(filter %.spp,$(<)), extern "C") \
+     void $$hanamake_test$$\#\#test_name($(hanamake_test_parameters))' \
+  -D'hanamake_assert(expression, ...)=($(hanamake_assert_definition))'
+
+# General build instructions
+build/0hana-main: $(object_files) build/0hana-main.c
+	@echo 'Pseudo-generation of $(@)'
+	@touch $(@)
+
 build/%.o: build/%.s
 	@echo '- Mechanizing : $(<) -> $(@)'
 	@gcc   -x assembler    $(<) -o $(@) -c
 
 build/%.s: source/%.c build/%.d
 	@echo '- Translating : $(<) -> $(@)'
-	@gcc      $(CFLAGS)    $(<) -o $(@) -S
+	@gcc      $(CFLAGS)    $(<) -o $(@) -S $(ASM_INCLUSIONS)
 
 build/%.d: source/%.c
 	@echo '- Prescanning : $(<) -> $(@)'
@@ -113,7 +127,7 @@ build/%.opp: build/%.spp
 
 build/%.spp: source/%.cpp build/%.dpp
 	@echo '- Translating : $(<) -> $(@)'
-	@g++     $(CPPFLAGS)   $(<) -o $(@) -S
+	@g++     $(CPPFLAGS)   $(<) -o $(@) -S $(ASM_INCLUSIONS)
 
 build/%.dpp: source/%.cpp
 	@echo '- Prescanning : $(<) -> $(@)'
