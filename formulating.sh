@@ -74,5 +74,40 @@ struct code_object_info
   ( FILE      ** const \$hanamake_test\$log_file
   , char const * const \$hanamake_test\$log_path
   ) ;
+}
+
+coi[code_objects] =
+{\
+"
+
+# Initialize the code object information ("coi") array
+for identity in ${2}
+do
+	base=$(basename ${identity})
+	if test -n "$(echo ${base} | grep '^\$hanamake_test\$')"
+	then
+	>>${1} echo "  { \"$(echo ${base} test | sed 's/^\$hanamake_test\$//')\""
+	else
+	>>${1} echo "  { \"${base}\""          # name string
+	fi
+
+	>>${1} echo "  , \"${identity}.log\""  # log_path string
+	>>${1} echo "  , NULL"                 # log_file FILE pointer
+	>>${1} echo "  , NULL"                 # dependency
+	>>${1} echo "  , NULL"                 # dependencies
+
+	if test -n "$(echo ${base} | grep '^_0hana_test_')"
+	then
+	>>${1} echo "  , ${base}"              # _0hana_test_ function pointer
+	else
+	>>${1} echo "  , NULL"
+	fi
+
+	>>${1} echo "  } ,"
+	>>${1} echo
+done
+
+>>${1} echo \
+"\
 } ;
 "
