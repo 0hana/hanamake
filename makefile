@@ -53,12 +53,14 @@ $(shell rm -r   previous_build \
 
 # Negate make target assumptions
 .SUFFIXES:
-CFLAGS   := -x c   -g -Wall -Wextra -Wpedantic
-CPPFLAGS := -x c++ -g -Wall -Wextra -Wpedantic
+CFLAGS     := -x c   -g -Wall -Wextra -Wpedantic
+CPPFLAGS   := -x c++ -g -Wall -Wextra -Wpedantic
+LINK_FLAGS :=        -g -Wall -Wextra -Wpedantic
 
 # Execute
 run: build/0hana-main
-	@echo 'generated build structure:' && tree build && echo 'vs' && tree source
+	@echo '-- EXECUTING --'
+	@$(<)
 
 clean:
 	@rm -r build && echo 'All build files removed.'
@@ -104,8 +106,8 @@ ASM_INCLUSIONS = \
 
 # General build instructions
 build/0hana-main: $(object_files) build/0hana-main.c
-	@echo 'Pseudo-generation of $(@)'
-	@touch $(@)
+	@echo '+  Compiling  : $(@)'
+	@gcc    $(LINK_FLAGS)  $(^) -o $(@)
 
 build/%.o: build/%.s
 	@echo '- Mechanizing : $(<) -> $(@)'
