@@ -108,7 +108,7 @@ do
 	if test -n "$(echo ${base} | grep '^__hanamake_test__')"
 	then
 	base_length=$((${base_length} - ${hanamake_test_prefix_length} + ${translation_length}))
-	>>${1} echo "  { \"$(for i in $(seq $((${longest_base} - ${base_length}))); do printf ' '; done)$(echo "${base}  <TEST>" | sed 's/^__hanamake_test__//')\""
+	>>${1} echo "  { \"$(for i in $(seq $((${longest_base} - ${base_length}))); do printf ' '; done)$(echo "${base}" | sed 's/^__hanamake_test__//')\""
 	else
 	>>${1} echo "  { \"$(for i in $(seq $((${longest_base} - ${base_length}))); do printf ' '; done)${base}\""
 	fi
@@ -186,12 +186,14 @@ int main(void)
 	{
 		switch(coi[index].status)
 		{
-			case updated: printf(\"  %s  [ updated ]\n\",   coi[index].name);
+			case updated:
+				printf(\"  %s%s  [ updated ]\n\", (coi[index].__hanamake_test__ ? \"(test)  \" : \"\"), coi[index].name);
 
 				if(coi[index].__hanamake_test__) { tests_required_to_run++; updates++; }
 				break;
 
-			case depends: printf(\"  %s  [ depends on: \", /*------*/ coi[index].name);
+			case depends:
+				printf(\"  %s%s  [ depends on: \", (coi[index].__hanamake_test__ ? \"(test)  \" : \"\"), coi[index].name);
 
 				printf(\"%s\", coi[coi[index].dependency[0]].name);
 
@@ -203,13 +205,13 @@ int main(void)
 				if(coi[index].__hanamake_test__) tests_required_to_run++;
 				break;
 
-			case  failed: printf(\"  %s  [ failing ]\n\", /**/ coi[index].name);
+			case  failed:
+				printf(\"  %s%s  [ failing ]\n\", (coi[index].__hanamake_test__ ? \"(test)  \" : \"\"), coi[index].name);
 
 				if(coi[index].__hanamake_test__) tests_required_to_run++;
 				break;
 
 			case  passed: /* do nothing */
-
 				break;
 		}
 	}
