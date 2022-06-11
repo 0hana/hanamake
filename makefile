@@ -60,7 +60,18 @@ LINK_FLAGS :=        -g -Wall -Wextra -Wpedantic
 # Execute
 run: build/0hana-main
 	@echo '-- EXECUTING --'
-	@$(<)
+	@if 2>&1 valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all -q -s $(<)\
+	| tee $(<).log\
+	&& ! grep -q '\[ FAILED \]' $(<).log\
+	&&   grep -q   'ERROR SUMMARY: 0' $(<).log\
+	&& rm $(<).log;\
+	then \
+	  echo; \
+	  echo '-- PASS -- No errors encountered.';\
+	else    >>$(<).log \
+	  echo; >>$(<).log \
+	  echo '-- FAIL -- See logs in build directory.';\
+	fi
 
 clean:
 	@rm -r build && echo 'All build files removed.'

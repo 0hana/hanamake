@@ -249,6 +249,8 @@ int main(void)
 
 	printf(\"\b\b\b   \nTesting Complete.\n\n\");
 
+	printf(\"Valgrind Memcheck Result:\n\");
+
 	return 0;
 }
 "
