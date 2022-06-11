@@ -40,8 +40,9 @@ $(shell mkdir -p $(target_directories))
 
 # Transfer existing target files to current build
 $(foreach target, $(target_files), $(shell test -e 'previous_$(target)' && mv 'previous_$(target)' '$(target)'))
-$(shell test -f previous_build/0hana-main   && mv previous_build/0hana-main   build/0hana-main)
-$(shell test -f previous_build/0hana-main.c && mv previous_build/0hana-main.c build/0hana-main.c)
+$(shell test -f previous_build/0hana-main       && mv previous_build/0hana-main       build/0hana-main)
+$(shell test -f previous_build/0hana-main.c     && mv previous_build/0hana-main.c     build/0hana-main.c)
+$(shell test -f previous_build/0hana-main.c.sed && mv previous_build/0hana-main.c.sed build/0hana-main.c.sed)
 $(shell rm -r   previous_build \
   $(if \
     $(shell find previous_build \( -name '*.[dios]' -o -name '*.[dios]pp' \)), \
@@ -150,7 +151,8 @@ build/%.dpp: source/%.cpp
 
 build/0hana-main.c: $(filter %.i %.ipp, $(target_files))
 	@echo '- Formulating : $(@)'
-	@sh      formulating.sh        $(@) \
+	@# Identify user function call dependencies
+	@function_paths=\
 	"\
 	$$(for directory in $(^)\
 	  ; do :\
@@ -161,7 +163,14 @@ build/0hana-main.c: $(filter %.i %.ipp, $(target_files))
 	  | LC_COLLATE=C sort -k1 -t/\
 	  | sed 's/^[$$0-9A-Z_a-z][$$0-9A-Z_a-z]*\///'\
 	  )\
-	"
+	"\
+	; function_names="$$(basename -a $${function_paths})" \
+	; echo $${function_names} \
+	| tr ' ' '\n' \
+	| cat -n \
+	| sed 's/[\t ]*\([0-9][0-9]*\)[\t ]*\([0-9A-Z_a-z][0-9A-Z_a-z]*\)/s\/\2\/(\1-1)\//' \
+	> $(@).sed \
+	; sh     formulating.sh        $(@) "$${function_paths}"
 
 # Until a robust and reliable method is made to identify meaningful
 # object changes between assembly files, the "one-function one-file"
