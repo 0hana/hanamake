@@ -173,7 +173,11 @@ csplit_script = \
   ; do function_name="$$(head -n 1 $${csplit_file} | sed 's/://')" \
   \
     ; mv $${csplit_file} $(@)/$${function_name} \
-    ; touch $(@)/$${function_name}.log \
+    ; if grep -q     "$${function_name}, @function" \
+    $(basename $(@))$(if $(filter %.i, $(@)),.s,.spp) \
+    ; then touch $(@)/$${function_name}.log \
+    ; else rm    $(@)/$${function_name} \
+    ; fi \
   \
   ; done
 

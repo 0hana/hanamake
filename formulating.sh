@@ -179,15 +179,16 @@ int main(void)
 	   and indirect (dependency on direct update) updates
 	*/
 
-	char tests_required_to_run = 0;
+	size_t tests_required_to_run = 0;
+	size_t updates = 0;
 
 	for(size_t index = 0; index < code_objects; index++)
 	{
 		switch(coi[index].status)
 		{
-			case updated: printf(\"  %s  [ updated source file ]\n\",   coi[index].name);
+			case updated: printf(\"  %s  [ updated ]\n\",   coi[index].name);
 
-				if(coi[index].__hanamake_test__) tests_required_to_run++;
+				if(coi[index].__hanamake_test__) { tests_required_to_run++; updates++; }
 				break;
 
 			case depends: printf(\"  %s  [ depends on: \", /*------*/ coi[index].name);
@@ -202,7 +203,7 @@ int main(void)
 				if(coi[index].__hanamake_test__) tests_required_to_run++;
 				break;
 
-			case  failed: printf(\"  %s  [ yet to pass ]\n\", /**/ coi[index].name);
+			case  failed: printf(\"  %s  [ failing ]\n\", /**/ coi[index].name);
 
 				if(coi[index].__hanamake_test__) tests_required_to_run++;
 				break;
@@ -218,8 +219,9 @@ int main(void)
 	*/
 
 
-	if(tests_required_to_run > 0) printf(\"\nRunning tests:\n\n\");
-	else printf(\"\nNo tests to run.\n\");
+	if(tests_required_to_run || updates) printf(\"\n\");
+	if(tests_required_to_run > 0) printf(\"Running tests:\n\n\");
+	else printf(\"No tests required.\n\");
 
 	printf(\"  ...\");
 
