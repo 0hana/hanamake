@@ -67,26 +67,26 @@ clean:
 
 # Special build variables
 hanamake_test_parameters := \
-  FILE      ** const $$hanamake_test$$log_file, \
-  char const * const $$hanamake_test$$log_path
+  FILE      ** const __hanamake_test__log_file, \
+  char const * const __hanamake_test__log_path
 
 hanamake_assert_definition := \
   (expression) \
   ? \
-  ( ((void)((*$$hanamake_test$$log_file == NULL) && remove($$hanamake_test$$log_path))), 1 ) \
+  ( ((void)((*__hanamake_test__log_file == NULL) && remove(__hanamake_test__log_path))), 1 ) \
   : \
   ( \
     ( \
       (void) \
       ( \
-        (*$$hanamake_test$$log_file == NULL) && \
-        (*$$hanamake_test$$log_file = fopen($$hanamake_test$$log_path, "a")) && \
-        (fprintf(*$$hanamake_test$$log_file, __FILE__ ": Failed assert(s):\n")) \
+        (*__hanamake_test__log_file == NULL) && \
+        (*__hanamake_test__log_file = fopen(__hanamake_test__log_path, "w")) && \
+        (fprintf(*__hanamake_test__log_file, __FILE__ "\nFailed assert(s):\n")) \
       ) \
     ) \
-    , fprintf(*$$hanamake_test$$log_file, "Line   \#  %i : (" \#expression ")\n", __LINE__) \
+    , fprintf(*__hanamake_test__log_file, "\nLine   \#  %i : (" \#expression ")\n", __LINE__) \
     __VA_OPT__(, \
-      fprintf(*$$hanamake_test$$log_file, "Context:  " __VA_ARGS__), fprintf(*$$hanamake_test$$log_file, "\n\n") \
+      fprintf(*__hanamake_test__log_file, "Context:  " __VA_ARGS__), fprintf(*__hanamake_test__log_file, "\n") \
     ) \
     , 0 \
   )
@@ -96,12 +96,12 @@ hanamake_assert_definition := \
 ASM_INCLUSIONS = \
   -Wno-unused-value \
   -D'hanamake_test(test_name)=$(if $(filter %.spp,$(<)), extern "C") \
-     void $$hanamake_test$$\#\#test_name(void)' \
+     void __hanamake_test__\#\#test_name(void)' \
   -D'hanamake_assert(expression, ...)=(0)'; \
   $(if $(filter %.spp, $(<)), g++ $(CPPFLAGS), gcc $(CFLAGS)) $(<) -o $(@) -S \
   -include /usr/include/stdio.h \
   -D'hanamake_test(test_name)=$(if $(filter %.spp,$(<)), extern "C") \
-     void $$hanamake_test$$\#\#test_name($(hanamake_test_parameters))' \
+     void __hanamake_test__\#\#test_name($(hanamake_test_parameters))' \
   -D'hanamake_assert(expression, ...)=($(hanamake_assert_definition))'
 
 # General build instructions
@@ -170,10 +170,10 @@ csplit_script = \
     | sed 's/\/\(\^[_A-Za-z0-9$$][_A-Za-z0-9$$]*:\$$\)\//%\1%/' \
     ) \
   ; for csplit_file in   $(@)/csplit_*.x \
-  ; do code_object_path="$(@)/$$(head -n 1 $${csplit_file} | sed 's/://')" \
+  ; do function_name="$$(head -n 1 $${csplit_file} | sed 's/://')" \
   \
-    ; mv $${csplit_file} $${code_object_path} \
-    ; touch $${code_object_path}.log \
+    ; mv $${csplit_file} $(@)/$${function_name} \
+    ; touch $(@)/$${function_name}.log \
   \
   ; done
 

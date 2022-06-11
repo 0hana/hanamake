@@ -44,12 +44,12 @@
 "
 
 # Insert unit test declarations
-test_names="$(basename -a ${2} | grep '^\$hanamake_test\$')"
+test_names="$(basename -a ${2} | grep '^__hanamake_test__')"
 for name in ${test_names}
 do
 >>${1} echo "void ${name}"
->>${1} echo "( FILE      ** const \$hanamake_test\$log_file"
->>${1} echo ", char const * const \$hanamake_test\$log_path"
+>>${1} echo "( FILE      ** const __hanamake_test__log_file"
+>>${1} echo ", char const * const __hanamake_test__log_path"
 >>${1} echo ") ;"
 >>${1} echo
 done
@@ -72,9 +72,9 @@ struct code_object_info
   size_t const * const dependency;
   size_t const         dependencies;
   /*------------------------------*/
-  void        (* const \$hanamake_test\$)
-  ( FILE      ** const \$hanamake_test\$log_file
-  , char const * const \$hanamake_test\$log_path
+  void        (* const __hanamake_test__)
+  ( FILE      ** const __hanamake_test__log_file
+  , char const * const __hanamake_test__log_path
   ) ;
   /*------------------------------------------*/
   enum code_object_status status;
@@ -85,13 +85,13 @@ coi[code_objects] =
 "
 
 # Identify longest code object name for test output formatting (relative right justify names)
-hanamake_test_prefix_length=$(printf '$hanamake_test$' | wc -m)
+hanamake_test_prefix_length=$(printf '__hanamake_test__' | wc -m)
 translation_length=8
 longest_base=0
 for name in $(basename -a ${2})
 do
 	name_length=$(printf ${name} | wc -m)
-	if test -n "$(echo   ${name} | grep '^\$hanamake_test\$')"
+	if test -n "$(echo   ${name} | grep '^__hanamake_test__')"
 	then name_length=$((${name_length} - ${hanamake_test_prefix_length} + ${translation_length}))
 	fi
 	if test ${name_length} -gt ${longest_base}
@@ -105,10 +105,10 @@ do
 	base=$(basename ${identity})
 	base_length=$(printf ${base} | wc -m)
 	# name string
-	if test -n "$(echo ${base} | grep '^\$hanamake_test\$')"
+	if test -n "$(echo ${base} | grep '^__hanamake_test__')"
 	then
 	base_length=$((${base_length} - ${hanamake_test_prefix_length} + ${translation_length}))
-	>>${1} echo "  { \"$(for i in $(seq $((${longest_base} - ${base_length}))); do printf ' '; done)$(echo "${base}  <TEST>" | sed 's/^\$hanamake_test\$//')\""
+	>>${1} echo "  { \"$(for i in $(seq $((${longest_base} - ${base_length}))); do printf ' '; done)$(echo "${base}  <TEST>" | sed 's/^__hanamake_test__//')\""
 	else
 	>>${1} echo "  { \"$(for i in $(seq $((${longest_base} - ${base_length}))); do printf ' '; done)${base}\""
 	fi
@@ -118,11 +118,11 @@ do
 	>>${1} echo "  , NULL"                 # dependency
 	>>${1} echo "  , 0"                    # dependencies
 
-	if test -n "$(echo ${base} | grep '^\$hanamake_test\$')"
+	if test -n "$(echo ${base} | grep '^__hanamake_test__')"
 	then
-	>>${1} echo "  , ${base}"              # \$hanamake_test\$ function pointer
+	>>${1} echo "  , ${base}"              # __hanamake_test__ function pointer
 	else
-	>>${1} echo "  , NULL"                 # \$hanamake_test\$ function NULL pointer (not a test)
+	>>${1} echo "  , NULL"                 # __hanamake_test__ function NULL pointer (not a test)
 	fi
 
 	>>${1} echo "  , failed"               # code object status (default: failed)
@@ -137,7 +137,7 @@ done
 
 int main(void)
 {
-	printf(\"\nScanning for updates ... \");
+	printf(\"\nIdentifying (re)test rationale:\n\n\");
 
 	/* Check for source file updates
 	   (empty logs in build/%.i(pp) produced by make)
@@ -162,14 +162,12 @@ int main(void)
 			*/
 			fclose(coi[index].log_file);
 			coi[index].log_file = NULL;
+			remove(coi[index].log_path);
 		}
 		/* No log file means no update nor failure -- an implicit pass
 		*/
 		else coi[index].status = passed;
 	}
-
-
-	printf(\"done\n\");
 
 
 	/* Code stub: Run topological dependency analysis
@@ -187,19 +185,26 @@ int main(void)
 	{
 		switch(coi[index].status)
 		{
-			case updated: printf(\"  %s  [ source file updated ]\n\",   coi[index].name);
+			case updated: printf(\"  %s  [ updated source file ]\n\",   coi[index].name);
 
-				if(coi[index].\$hanamake_test\$) tests_required_to_run++;
+				if(coi[index].__hanamake_test__) tests_required_to_run++;
 				break;
 
-			case depends: printf(\"  %s  [ depends on ]\n\", /*------*/ coi[index].name);
+			case depends: printf(\"  %s  [ depends on: \", /*------*/ coi[index].name);
 
-				if(coi[index].\$hanamake_test\$) tests_required_to_run++;
+				printf(\"%s\", coi[coi[index].dependency[0]].name);
+
+				for(size_t D = 1; D < coi[index].dependencies; D++)
+					printf(\", %s\", coi[coi[index].dependency[D]].name);
+
+				printf(\" ]\n\");
+
+				if(coi[index].__hanamake_test__) tests_required_to_run++;
 				break;
 
-			case  failed: printf(\"  %s  [ failed last time ]\n\", /**/ coi[index].name);
+			case  failed: printf(\"  %s  [ yet to pass ]\n\", /**/ coi[index].name);
 
-				if(coi[index].\$hanamake_test\$) tests_required_to_run++;
+				if(coi[index].__hanamake_test__) tests_required_to_run++;
 				break;
 
 			case  passed: /* do nothing */
@@ -220,13 +225,13 @@ int main(void)
 
 	for(size_t index = 0; index < code_objects; index++)
 	{
-		if(coi[index].\$hanamake_test\$ != NULL && coi[index].status != passed)
+		if(coi[index].__hanamake_test__ != NULL && coi[index].status != passed)
 		{
-			coi[index].\$hanamake_test\$(&(coi[index].log_file), coi[index].log_path);
+			coi[index].__hanamake_test__(&(coi[index].log_file), coi[index].log_path);
 
 			if(coi[index].log_file != NULL)
 			{
-				printf(\"\b\b\b%s  [ FAILED ] -- see  %s\n  ...\", coi[index].name, coi[index].log_path);
+				printf(\"\b\b\b%s  [ FAILED ] -- see %s\n  ...\", coi[index].name, coi[index].log_path);
 				coi[index].status = failed;
 			}
 
