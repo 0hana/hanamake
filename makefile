@@ -170,6 +170,17 @@ build/0hana-main.c: $(filter %.i %.ipp, $(target_files))
 	| cat -n \
 	| sed 's/[\t ]*\([0-9][0-9]*\)[\t ]*\([0-9A-Z_a-z][0-9A-Z_a-z]*\)/s\/\2\/(\1-1)\//' \
 	> $(@).sed \
+	; for path in $${function_paths} \
+	; do : \
+	  ; echo; echo $${path} ; echo \
+	  ; grep 'bl\|call' $${path} \
+	  | grep -vw "$$(basename $${path})" \
+	  | grep -ow "$$(echo $${function_names} | sed 's/\([0-9A-Z_a-z][0-9A-Z_a-z]*\)[ ]*/\1\\|/g')" \
+	  | LC_COLLATE=C sort -u \
+		| sed -f $(@).sed \
+		>    $${path}.dependencies \
+	  ; mv $${path}.dependencies $${path} \
+	; done \
 	; sh     formulating.sh        $(@) "$${function_paths}"
 
 # Until a robust and reliable method is made to identify meaningful
