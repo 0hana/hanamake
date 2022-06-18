@@ -1,7 +1,7 @@
 #  Copyright (C) 2022 Hanami Zero
 #
 #  This file is part of hanamake,
-#  a collection of C and C++ development utilities.
+#  a C and C++ development testing utility.
 #
 #  hanamake is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU Affero General Public License --
@@ -56,6 +56,25 @@ done
 
 # Get number of code objects
 >>${1} echo "#define code_objects $(echo ${2} | wc -w)"
+
+function_names="$(basename -a ${2})"
+echo ${function_names} \
+| tr ' ' '\n' \
+| cat -n \
+| sed 's/[\t ]*\([0-9][0-9]*\)[\t ]*\([(),0-9:A-Z_a-z][(),0-9:A-Z_a-z]*\)/s\/\2\/(\1-1)\//' \
+> 0hana-main.c.sed
+
+# Problem solved.
+
+for path in ${2}
+do : \
+	; grep 'bl\|call'     "${path}" \
+	| grep -vw "$(basename ${path})" \
+	| grep -ow "$(echo ${function_names} | sed 's/\([(),0-9:A-Z_a-z][(),0-9:A-Z_a-z]*\)[ ]*/\1\\|/g')" \
+	| LC_COLLATE=C sort -u \
+	>  ${path}.dependencies
+	mv ${path}.dependencies ${path}
+done
 
 # Define code object information structure for access in dispatcher loop
 >>${1} echo \
@@ -113,7 +132,7 @@ do
 	>>${1} echo "  { \"$(for i in $(seq $((${longest_base} - ${base_length}))); do printf ' '; done)${base}\""
 	fi
 
-	>>${1} echo "  , \"${identity}.log\""  # log_path string
+	>>${1} echo "  , \"$(echo ${identity}.log | sed 's/^build\//logs\//')\""  # log_path string
 	>>${1} echo "  , NULL"                 # log_file FILE pointer
 	>>${1} echo "  , NULL"                 # dependency
 	>>${1} echo "  , 0"                    # dependencies
@@ -140,7 +159,7 @@ int main(void)
 	printf(\"\nIdentifying (re)test rationale:\n\n\");
 
 	/* Check for source file updates
-	   (empty logs in build/%.i(pp) produced by make)
+	   (empty logs in logs/%.i(pp) produced by make)
 	*/
 
 	for(size_t index = 0; index < code_objects; index++)
@@ -188,8 +207,9 @@ int main(void)
 		{
 			case updated:
 				printf(\"  %s%s  [ updated ]\n\", (coi[index].__hanamake_test__ ? \"(test)  \" : \"\"), coi[index].name);
+				updates++;
 
-				if(coi[index].__hanamake_test__) { tests_required_to_run++; updates++; }
+				if(coi[index].__hanamake_test__) { tests_required_to_run++; }
 				break;
 
 			case depends:

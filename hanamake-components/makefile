@@ -1,7 +1,7 @@
 #  Copyright (C) 2022 Hanami Zero
 #
 #  This file is part of hanamake,
-#  a collection of C and C++ development utilities.
+#  a C and C++ development testing utility.
 #
 #  hanamake is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU Affero General Public License --
@@ -16,68 +16,62 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
 
-.PHONY: clean run
+.PHONY:
+
 
 # Identify target files
+
 source_files := \
-  $(shell 2>/dev/null find source \( -name '*.c' -o -name '*.cpp' \) -type f)
+  $(shell 2>/dev/null find -H source \( -name '*.c' -o -name '*.cpp' \) -type f)
+
 
 object_files := \
   $(foreach source, $(filter %.c,   $(source_files)), $(source:source/%.c=build/%.o)) \
   $(foreach source, $(filter %.cpp, $(source_files)), $(source:source/%.cpp=build/%.opp))
 
+
 target_files := \
   $(foreach base, $(basename $(filter %.o,   $(object_files))), $(base).d   $(base).i   $(base).o   $(base).s) \
   $(foreach base, $(basename $(filter %.opp, $(object_files))), $(base).dpp $(base).ipp $(base).opp $(base).spp)
 
+
 .PRECIOUS: $(if $(source_files), $(target_files), $(error missing source (.c or .cpp) files))
 
+
 # Identify and Isolate target directories
+
 target_directories := $(sort $(dir $(object_files)))
 $(shell mkdir -p $(target_directories))
 $(shell mv build previous_build)
 $(shell mkdir -p $(target_directories))
 
+
 # Transfer existing target files to current build
-$(foreach target, $(target_files), $(shell test -e 'previous_$(target)' && mv 'previous_$(target)' '$(target)'))
-$(shell test -f previous_build/0hana-main       && mv previous_build/0hana-main       build/0hana-main)
-$(shell test -f previous_build/0hana-main.c     && mv previous_build/0hana-main.c     build/0hana-main.c)
-$(shell test -f previous_build/0hana-main.c.sed && mv previous_build/0hana-main.c.sed build/0hana-main.c.sed)
-$(shell rm -r   previous_build \
+
+$(foreach target, \
+  $(target_files), \
+  $(shell test -e 'previous_$(target)' && mv 'previous_$(target)' '$(target)') \
+)
+$(shell rm -r previous_build \
   $(if \
     $(shell find previous_build \( -name '*.[dios]' -o -name '*.[dios]pp' \)), \
-    $(info Removing build/0hana-main.c to ensure consistency with removed or renamed source files) \
+    $(info Removing 0hana-main.c to ensure consistency with removed or renamed source files) \
     $(info ) \
-    && rm -f build/0hana-main.c \
+    && rm -f 0hana-main.c \
   ) \
 )
 
+
 # Negate make target assumptions
+
 .SUFFIXES:
 CFLAGS     := -x c   -g -Wall -Wextra -Wpedantic
 CPPFLAGS   := -x c++ -g -Wall -Wextra -Wpedantic
 LINK_FLAGS :=        -g -Wall -Wextra -Wpedantic
 
-# Execute
-run: build/0hana-main
-	@echo '-- EXECUTING --'
-	@if 2>&1 valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all -q -s $(<)\
-	| tee $(<).log\
-	&& ! grep -q '\[ FAILED \]' $(<).log\
-	&&   grep -q   'ERROR SUMMARY: 0' $(<).log\
-	&& rm $(<).log;\
-	then \
-	  echo; \
-	  echo '-- PASS -- No errors encountered.';\
-	else    >>$(<).log \
-	  echo; >>$(<).log \
-	  echo '-- FAIL -- See logs in build directory.';\
-	fi
-
-clean:
-	@rm -r build && echo 'All build files removed.'
 
 # Special build variables
+
 hanamake_test_parameters := \
   FILE      ** const __hanamake_test__log_file, \
   char const * const __hanamake_test__log_path
@@ -103,31 +97,37 @@ hanamake_assert_definition := \
     , 0 \
   )
 
+
 # The first  gcc checks to see if the user is missing #include <stdio.h>
 # The second gcc includes <stdio.h> and defines the hanamake macros in .c(pp)
+
 ASM_INCLUSIONS = \
   -Wno-unused-value \
-  -D'hanamake_test(test_name)=$(if $(filter %.spp,$(<)), extern "C") \
+  -D'hanamake_test(test_name)=$(if $(filter %.spp,$(@)), extern "C") \
      void __hanamake_test__\#\#test_name(void)' \
   -D'hanamake_assert(expression, ...)=(0)'; \
-  $(if $(filter %.spp, $(<)), g++ $(CPPFLAGS), gcc $(CFLAGS)) $(<) -o $(@) -S \
+  $(if $(filter %.s, $(@)), gcc $(CFLAGS), g++ $(CPPFLAGS)) $(<) -o $(@) -S \
   -include /usr/include/stdio.h \
-  -D'hanamake_test(test_name)=$(if $(filter %.spp,$(<)), extern "C") \
+  -D'hanamake_test(test_name)=$(if $(filter %.spp,$(@)), extern "C") \
      void __hanamake_test__\#\#test_name($(hanamake_test_parameters))' \
   -D'hanamake_assert(expression, ...)=($(hanamake_assert_definition))'
 
+
 # General build instructions
-build/0hana-main: $(object_files) build/0hana-main.c
+0hana-main: $(object_files) 0hana-main.c
 	@echo '+  Compiling  : $(@)'
 	@gcc    $(LINK_FLAGS)  $(^) -o $(@)
+
 
 build/%.o: build/%.s
 	@echo '- Mechanizing : $(<) -> $(@)'
 	@gcc   -x assembler    $(<) -o $(@) -c
 
+
 build/%.s: source/%.c build/%.d
 	@echo '- Translating : $(<) -> $(@)'
 	@gcc      $(CFLAGS)    $(<) -o $(@) -S $(ASM_INCLUSIONS)
+
 
 build/%.d: source/%.c
 	@echo '- Prescanning : $(<) -> $(@)'
@@ -135,13 +135,16 @@ build/%.d: source/%.c
 	@# so that if their #include "files" are updated, they will be remade
 	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.d=.s)
 
+
 build/%.opp: build/%.spp
 	@echo '- Mechanizing : $(<) -> $(@)'
 	@g++   -x assembler    $(<) -o $(@) -c
 
+
 build/%.spp: source/%.cpp build/%.dpp
 	@echo '- Translating : $(<) -> $(@)'
 	@g++     $(CPPFLAGS)   $(<) -o $(@) -S $(ASM_INCLUSIONS)
+
 
 build/%.dpp: source/%.cpp
 	@echo '- Prescanning : $(<) -> $(@)'
@@ -149,10 +152,13 @@ build/%.dpp: source/%.cpp
 	@# so that if their #include "files" are updated, they will be remade
 	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.dpp=.spp)
 
-build/0hana-main.c: $(filter %.i %.ipp, $(target_files))
+
+formulating_script := $(hanamake_components)/formulating.sh
+
+
+0hana-main.c: $(filter %.i %.ipp, $(target_files))
 	@echo '- Formulating : $(@)'
-	@# Identify user function call dependencies
-	@function_paths=\
+	@sh    $(formulating_script)   $(@) \
 	"\
 	$$(for directory in $(^)\
 	  ; do :\
@@ -161,37 +167,23 @@ build/0hana-main.c: $(filter %.i %.ipp, $(target_files))
 	    ; done\
 	  ; done\
 	  | LC_COLLATE=C sort -k1 -t/\
-	  | sed 's/^[$$0-9A-Z_a-z][$$0-9A-Z_a-z]*\///'\
+	  | sed 's/^[(),0-9:A-Z_a-z][(),0-9:A-Z_a-z]*\///'\
 	  )\
-	"\
-	; function_names="$$(basename -a $${function_paths})" \
-	; echo $${function_names} \
-	| tr ' ' '\n' \
-	| cat -n \
-	| sed 's/[\t ]*\([0-9][0-9]*\)[\t ]*\([0-9A-Z_a-z][0-9A-Z_a-z]*\)/s\/\2\/(\1-1)\//' \
-	> $(@).sed \
-	; for path in $${function_paths} \
-	; do : \
-	  ; echo; echo $${path} ; echo \
-	  ; grep 'bl\|call' $${path} \
-	  | grep -vw "$$(basename $${path})" \
-	  | grep -ow "$$(echo $${function_names} | sed 's/\([0-9A-Z_a-z][0-9A-Z_a-z]*\)[ ]*/\1\\|/g')" \
-	  | LC_COLLATE=C sort -u \
-		| sed -f $(@).sed \
-		>    $${path}.dependencies \
-	  ; mv $${path}.dependencies $${path} \
-	; done \
-	; sh     formulating.sh        $(@) "$${function_paths}"
+	"
+
 
 # Until a robust and reliable method is made to identify meaningful
 # object changes between assembly files, the "one-function one-file"
 # approach is only known way to generally achieve re-test minimization.
 #
 # In the meantime, remove and remake build/%.i(pp) directories per source update
+
 remove_and_remake_script = \
   echo '- Subdividing : $(<) -> $(@)'; rm -rf $(@) && mkdir $(@)
 
+
 # Split build/%.s(pp) files into partial assembly files under build/%.i(pp)
+
 csplit_script = \
   csplit --prefix='$(@)/csplit_' --suffix-format='%%_%i.x' --silent $(<) \
   $$(echo \
@@ -206,18 +198,22 @@ csplit_script = \
     ; mv $${csplit_file} $(@)/$${function_name} \
     ; if grep -q     "$${function_name}, @function" \
     $(basename $(@))$(if $(filter %.i, $(@)),.s,.spp) \
-    ; then touch $(@)/$${function_name}.log \
-    ; else rm    $(@)/$${function_name} \
+    ; then mkdir -p $(@:build/%=logs/%) \
+      &&   touch    $(@:build/%=logs/%)/$${function_name}.log \
+    ; else rm       $(@)/$${function_name} \
     ; fi \
   \
   ; done
+
 
 build/%.i: build/%.s
 	@$(remove_and_remake_script)
 	@$(csplit_script)
 
+
 build/%.ipp: build/%.spp
 	@$(remove_and_remake_script)
 	@$(csplit_script)
+
 
 -include $(filter %.d %.dpp, $(target_files))
