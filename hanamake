@@ -46,7 +46,7 @@ then
   fi
   if test ${#} -eq 2
   then ln -s ../"${2}" source; source="${2}"
-  else ln -s ../source source; source=source
+  else ln -s ../source source; source= #zero
   fi
 else
   1>&2 echo "${Usage}"
@@ -62,7 +62,7 @@ if ! test -e source; then issue="does not exist"    ; fi
 
 if test "${issue}" != "hakuna matata"
 then
-  if test "${source}" != source
+  if test -n "${source}"
   then
     1>&2 echo "hanamake:  specified <source-code-directory> '${source}'"
     1>&2 echo "           ${issue}."
