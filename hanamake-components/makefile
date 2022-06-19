@@ -72,27 +72,27 @@ LINK_FLAGS :=        -g -Wall -Wextra -Wpedantic
 
 # Special build variables
 
-hanamake_test_parameters := \
-  FILE      ** const __hanamake_test__log_file, \
-  char const * const __hanamake_test__log_path
+hanamade_test_parameters := \
+  FILE      ** const __hanamade_test__log_file, \
+  char const * const __hanamade_test__log_path
 
-hanamake_assert_definition := \
+hanamade_assert_definition := \
   (expression) \
   ? \
-  ( ((void)((*__hanamake_test__log_file == NULL) && remove(__hanamake_test__log_path))), 1 ) \
+  ( ((void)((*__hanamade_test__log_file == NULL) && remove(__hanamade_test__log_path))), 1 ) \
   : \
   ( \
     ( \
       (void) \
       ( \
-        (*__hanamake_test__log_file == NULL) && \
-        (*__hanamake_test__log_file = fopen(__hanamake_test__log_path, "w")) && \
-        (fprintf(*__hanamake_test__log_file, __FILE__ "\nFailed assert(s):\n")) \
+        (*__hanamade_test__log_file == NULL) && \
+        (*__hanamade_test__log_file = fopen(__hanamade_test__log_path, "w")) && \
+        (fprintf(*__hanamade_test__log_file, __FILE__ "\nFailed assert(s):\n")) \
       ) \
     ) \
-    , fprintf(*__hanamake_test__log_file, "\nLine   \#  %i : (" \#expression ")\n", __LINE__) \
+    , fprintf(*__hanamade_test__log_file, "\nLine   \#  %i : (" \#expression ")\n", __LINE__) \
     __VA_OPT__(, \
-      fprintf(*__hanamake_test__log_file, "Context:  " __VA_ARGS__), fprintf(*__hanamake_test__log_file, "\n") \
+      fprintf(*__hanamade_test__log_file, "Context:  " __VA_ARGS__), fprintf(*__hanamade_test__log_file, "\n") \
     ) \
     , 0 \
   )
@@ -104,13 +104,13 @@ hanamake_assert_definition := \
 ASM_INCLUSIONS = \
   -Wno-unused-value \
   -D'hanamake_test(test_name)=$(if $(filter %.spp,$(@)), extern "C") \
-     void __hanamake_test__\#\#test_name(void)' \
+     void __hanamade_test__\#\#test_name(void)' \
   -D'hanamake_assert(expression, ...)=(0)'; \
   $(if $(filter %.s, $(@)), gcc $(CFLAGS), g++ $(CPPFLAGS)) $(<) -o $(@) -S \
   -include /usr/include/stdio.h \
   -D'hanamake_test(test_name)=$(if $(filter %.spp,$(@)), extern "C") \
-     void __hanamake_test__\#\#test_name($(hanamake_test_parameters))' \
-  -D'hanamake_assert(expression, ...)=($(hanamake_assert_definition))'
+     void __hanamade_test__\#\#test_name($(hanamade_test_parameters))' \
+  -D'hanamake_assert(expression, ...)=($(hanamade_assert_definition))'
 
 
 # General build instructions
