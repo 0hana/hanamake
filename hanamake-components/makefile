@@ -187,12 +187,12 @@ remove_and_remake_script = \
 csplit_script = \
   csplit --prefix='$(@)/csplit_' --suffix-format='%%_%i.x' --silent $(<) \
   $$(echo \
-    $$(grep      '^[_A-Za-z0-9$$][_A-Za-z0-9$$]*:$$' $(<) \
-      | sed  's/\(^[_A-Za-z0-9$$][_A-Za-z0-9$$]*:$$\)/\/^\1$$\//' \
+    $$(grep      '^[$$A-Z_a-z][$$0-9A-Z_a-z]*:$$' $(<) \
+      | sed  's/\(^[$$A-Z_a-z][$$0-9A-Z_a-z]*:$$\)/\/^\1$$\//' \
       ) \
-    | sed 's/\/\(\^[_A-Za-z0-9$$][_A-Za-z0-9$$]*:\$$\)\//%\1%/' \
+    | sed 's/\/\(\^[$$A-Z_a-z][$$0-9A-Z_a-z]*:\$$\)\//%\1%/' \
     ) \
-  ; for csplit_file in   $(@)/csplit_*.x \
+  ; for csplit_file in $(@)/csplit_*.x \
   ; do function_name="$$(head -n 1 $${csplit_file} | sed 's/://')" \
   \
     ; mv $${csplit_file} $(@)/$${function_name} \
