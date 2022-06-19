@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
 
-.PHONY:
+.DELETE_ON_ERROR:
 
 
 # Identify target files

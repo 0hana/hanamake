@@ -138,8 +138,8 @@ rm -r previous_logs
 
 #  Invoke the hanamakefile
 
-make    hanamake_components="${hanamake_components}" \
-  -f "${hanamake_components}/makefile"
+make -r hanamake_components="${hanamake_components}" \
+  -f "${hanamake_components}/makefile" || exit 3
 
 
 #  Run the run the unit tester
