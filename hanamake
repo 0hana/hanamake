@@ -112,7 +112,7 @@ done
 
 #  Find hanamake-components directory -- adjust based on install
 
-hanamake_components="$(2>/dev/null find / -name 'hanamake-components' -type d)"
+hanamake_components="$(dirname $(command -v hanamake))/hanamake-components"
 
 
 #  Provide and maintain a logs directory to record updates and errors
@@ -138,7 +138,8 @@ rm -r previous_logs
 
 #  Invoke the hanamakefile
 
-make -r hanamake_components="${hanamake_components}" \
+make \
+  -j -r hanamake_components="${hanamake_components}" \
   -f "${hanamake_components}/makefile" || exit 3
 
 
@@ -159,13 +160,13 @@ then
   echo
   echo 'Final Result... -- PASS -- No errors encountered.'
   rm -r logs
-  status='0'
+  ctatus='0'
 else
   echo \
   | tee -a 0hana-main.log
   echo 'Final Result... -- FAIL -- See hanamade/logs.' \
   | tee -a 0hana-main.log
-  status='128'
+  ctatus='128'
 fi
 
 
@@ -175,6 +176,7 @@ rm -r         previous_source
 cp -Hr source previous_source
 
 
-#  Return exit status
+#  Return exit ctatus --
+#  zsh treats 'status' as special and blocks use. Peaches.
 
-exit ${status}
+exit ${ctatus}
