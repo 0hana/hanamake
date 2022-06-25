@@ -145,6 +145,7 @@ make \
 
 #  Run the run the unit tester
 
+echo
 echo '-- EXECUTING --'
 if 2>&1 valgrind \
   --tool=memcheck \
@@ -158,13 +159,13 @@ if 2>&1 valgrind \
 && rm 0hana-main.log
 then
   echo
-  echo 'Final Result... -- PASS -- No errors encountered.'
+  echo '* Final Result... -- PASS -- No errors encountered.'
   rm -r logs
   ctatus='0'
 else
   echo \
   | tee -a 0hana-main.log
-  echo 'Final Result... -- FAIL -- See hanamade/logs.' \
+  echo '* Final Result... -- FAIL -- See hanamade/logs.' \
   | tee -a 0hana-main.log
   ctatus='128'
 fi

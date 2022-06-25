@@ -21,7 +21,7 @@
 /* Copyright (C) 2022 Hanami Zero
 
    This file is part of hanamake,
-   a collection of C and C++ development utilities.
+   a C and C++ development testing utility.
 
    hanamake is free software: you can redistribute it and/or modify
    it under the terms of the GNU Affero General Public License --
@@ -63,8 +63,6 @@ echo ${function_names} \
 | cat -n \
 | sed 's/[\t ]*\([0-9][0-9]*\)[\t ]*\([(),0-9:A-Z_a-z][(),0-9:A-Z_a-z]*\)/s\/\2\/(\1-1)\//' \
 > 0hana-main.c.sed
-
-# Problem solved.
 
 for path in ${2}
 do : \
@@ -154,49 +152,190 @@ done
 "\
 } ;
 
+
+/* Determine topological ordering,
+   (a pseudo-topological ordering if circular dependencies are present)
+
+   So that code objects are placed after their dependencies in top[] */
+
+
+/* First, create implicitly available variables */
+
+typedef size_t     code_object_index;
+typedef size_t     code_object_dependency_index;
+
+code_object_index  top[code_objects];
+code_object_index  top_iterator = 0;
+
+enum { unsorted, sorted, in_recursion }
+top_status[code_objects] = { unsorted };
+
+
+/* Declare the recursive step of topological sorting */
+
+void topological_sort_visit
+( code_object_index const C
+) ;
+
+
+/* Define the inital step / outer loop for topological sorting */
+
+void topological_sort_dependencies
+(
+)
+{
+	for
+	( code_object_index C = 0
+	; C < code_objects
+	; C++
+	)
+	{
+		if(top_status[C] == unsorted)
+			topological_sort_visit(C);
+	}
+}
+
+
+/* Define the recursive step for topological sorting */
+
+void topological_sort_visit
+( code_object_index const C
+)
+{
+	top_status[C] = in_recursion;
+
+	for
+	( code_object_dependency_index D = 0
+	; D < coi[C].dependencies
+	; D++
+	)
+	{
+		if(top_status[coi[C].dependency[D]] == unsorted)
+		{
+			topological_sort_visit(coi[C].dependency[D]);
+		}
+		else
+		if(top_status[coi[C].dependency[D]] == in_recursion)
+		{
+			/* Circular dependency detected
+			-- do nothing */
+		}
+		else
+		// Already 'sorted'
+		{
+			/* Forward edge detected
+			-- do nothing */
+		}
+	}
+
+	top[top_iterator++] = C;
+	top_status[C] = sorted;
+}
+
+
 int main(void)
 {
-	printf(\"\nIdentifying (re)test rationale:\n\n\");
+	printf(\"\n- Identifying indirect dependencies...\");
+
+	topological_sort_dependencies();
+
+
+	printf(\"\n- Determining (re)test rationale...\n\");
 
 	/* Check for source file updates
-	   (empty logs in logs/%.i(pp) produced by make)
-	*/
+	   (empty logs in logs/%.i(pp) produced by make) */
 
 	for(size_t index = 0; index < code_objects; index++)
 	{
-		/* Log file presence indicates either source update or prior test failure
-		*/
+		/* Log file presence indicates either source update or
+		   prior test failure */
+
 		if((coi[index].log_file = fopen(coi[index].log_path, \"r\")))
 		{
 			/* Getting an End Of File (EOF) value at the beginning of
-			   the file means its empty, and the corresponding source file was updated
+			   the file means its empty,
+			   and the corresponding source file was updated
 
-				 Getting any other value means the file is non-empty, indicating a prior
-				 testing failure (which is the default assumption, so no action is taken)
-			*/
+			   Getting any other value means the file is non-empty,
+			   indicating a prior testing failure
+			   (which is the default assumption, so no action is taken) */
+
 			if(fgetc(coi[index].log_file) == EOF) coi[index].status = updated;
 
-			/* Close and reassign NULL to log_file to avoid interfering with testing,
-			   which uses a   non-NULL    log_file value to detect a failed test.
-			*/
+			/* Close and reassign NULL to log_file
+			   to avoid interfering with testing,
+			   which uses a non-NULL  log_file value to detect a failed test */
+
 			fclose(coi[index].log_file);
 			coi[index].log_file = NULL;
 			remove(coi[index].log_path);
 		}
-		/* No log file means no update nor failure -- an implicit pass
-		*/
+
+
+		/* No log file means no update nor failure -- an implicit pass */
+
 		else coi[index].status = passed;
 	}
 
 
-	/* Code stub: Run topological dependency analysis
+	/* Run topological dependency analysis
 	   setting non-updated objects that depend on objects
-	   with status: 'updated' OR 'depends' to 'depends'
-	*/
+	   with status:
+	   'updated' OR
+	   'depends' to 'depends' */
 
-	/* Identify required testing based on direct (source file update)
-	   and indirect (dependency on direct update) updates
-	*/
+	for
+	( code_object_index index = 0
+	; index < code_objects
+	; index++
+	)
+	{
+		if(coi[top[index]].status != updated)
+		{
+			for
+			( code_object_dependency_index D = 0
+			; D < coi[top[index]].dependencies
+			; D++
+			)
+			{
+				/* Iterating through the code objects in
+				   TOPOLOGICAL order, get the status of each
+				   dependency.
+
+				   If the dependency has been
+				   'updated' or
+				   'depends' on anything,
+
+				   set the depending code object--
+				   NOT the dependency--
+				   status to 'depends'
+
+				   The result consistency check at the end handles
+				   the case of a passed test depending on a failed test.
+
+				   The status of the depending object can be changed with:
+				   coi[top[index]].status = <new_status>
+
+				   The status of the dependency can be accessed through:
+				   coi[coi[top[index]].dependency[D]].status */
+
+				if(coi[coi[top[index]].dependency[D]].status == updated
+				|| coi[coi[top[index]].dependency[D]].status == depends
+				)
+				{
+					coi[top[index]].status = depends;
+				}
+			}
+		}
+	}
+
+	/* Identify required testing based on direct updates (source file updates)
+	   OR
+	   indirect updates
+	   (dependency on direct update
+	    OR
+		dependency on dependency on ... direct update
+	   ) */
 
 	size_t tests_required_to_run = 0;
 	size_t updates = 0;
@@ -206,27 +345,33 @@ int main(void)
 		switch(coi[index].status)
 		{
 			case updated:
-				printf(\"  %s%s  [ updated ]\n\", (coi[index].__hanamade_test__ ? \"(test)  \" : \"\"), coi[index].name);
+				printf(\"\n  %s%s  [ updated ]\", (coi[index].__hanamade_test__ ? \"(test)  \" : \"\"), coi[index].name);
 				updates++;
 
 				if(coi[index].__hanamade_test__) { tests_required_to_run++; }
 				break;
 
 			case depends:
-				printf(\"  %s%s  [ depends on: \", (coi[index].__hanamade_test__ ? \"(test)  \" : \"\"), coi[index].name);
+				printf(\"\n  %s%s  [ depends on: \", (coi[index].__hanamade_test__ ? \"(test)  \" : \"\"), coi[index].name);
 
-				printf(\"%s\", coi[coi[index].dependency[0]].name);
+				/* Is this behavior you desire? */
+
+				if(coi[coi[index].dependency[0]].status == updated
+				|| coi[coi[index].dependency[0]].status == depends
+				) printf(\"%s\", coi[coi[index].dependency[0]].name);
 
 				for(size_t D = 1; D < coi[index].dependencies; D++)
-					printf(\", %s\", coi[coi[index].dependency[D]].name);
+					if(coi[coi[index].dependency[D]].status == updated
+					|| coi[coi[index].dependency[D]].status == depends
+					) printf(\", %s\", coi[coi[index].dependency[D]].name);
 
-				printf(\" ]\n\");
+				printf(\" ]\");
 
 				if(coi[index].__hanamade_test__) tests_required_to_run++;
 				break;
 
 			case  failed:
-				printf(\"  %s%s  [ failing ]\n\", (coi[index].__hanamade_test__ ? \"(test)  \" : \"\"), coi[index].name);
+				printf(\"\n  %s%s  [ failing ]\", (coi[index].__hanamade_test__ ? \"(test)  \" : \"\"), coi[index].name);
 
 				if(coi[index].__hanamade_test__) tests_required_to_run++;
 				break;
@@ -237,13 +382,10 @@ int main(void)
 	}
 
 
-	/* Execute required tests and report results
-	*/
-
-
-	if(tests_required_to_run || updates) printf(\"\n\");
-	if(tests_required_to_run > 0) printf(\"Running tests:\n\n\");
-	else printf(\"No tests required.\n\");
+	/* Execute required tests and report results */
+	if(tests_required_to_run || updates) printf(\"\n\n\");
+	if(tests_required_to_run > 0) printf(\"- Testing Functions...\n\n\");
+	else printf(\"- No testing required.\n\");
 
 	printf(\"  ...\");
 
@@ -255,7 +397,7 @@ int main(void)
 
 			if(coi[index].log_file != NULL)
 			{
-				printf(\"\b\b\b%s  [ FAILED ] -- see %s\n  ...\", coi[index].name, coi[index].log_path);
+				printf(\"\b\b\b%s  [ FAILED ] -- see hanamade/%s\n  ...\", coi[index].name, coi[index].log_path);
 				coi[index].status = failed;
 			}
 
@@ -267,9 +409,180 @@ int main(void)
 		}
 	}
 
-	printf(\"\b\b\b   \nTesting Complete.\n\n\");
 
-	printf(\"Valgrind Memcheck Result:\n\");
+	printf(\"\b\b\b   \n- Complete.\n\");
+
+
+	printf(\"- Checking results for inconsistencies...\n\");
+
+	char consistent = 1;  // true
+
+	FILE * inconsistent_test_results_log =
+	fopen(\"inconsistent-test-results.log\", \"w\");
+
+	for(size_t index = 0; index < code_objects; index++)
+	{
+		char inconsistent = 0;  // reset - false
+
+		if(coi[index].status == passed)
+		{
+			for(size_t D = 0; D < coi[index].dependencies; D++)
+			{
+				if(coi[coi[index].dependency[D]].status == failed)
+				{
+					inconsistent += 1;  // true
+					  consistent = 0;  // false
+
+					if(inconsistent == 1)
+					{
+						char const * const ir_log_text_format =
+						\"\n  %s  [ INCONSISTENT WITH DEPENDENCY: %s\";
+
+						fprintf
+						( inconsistent_test_results_log
+						, ir_log_text_format
+						, coi[index].name
+						, coi[coi[index].dependency[D]].name
+						);
+
+						printf
+						( ir_log_text_format
+						, coi[index].name
+						, coi[coi[index].dependency[D]].name
+						);
+					}
+					else  // multiple inconsistencies
+					{
+						char const * const ir_log_text_format =
+						\", %s\";
+
+						fprintf
+						( inconsistent_test_results_log
+						, ir_log_text_format
+						, coi[coi[index].dependency[D]].name
+						);
+
+						printf
+						( ir_log_text_format
+						, coi[coi[index].dependency[D]].name
+						);
+					}
+				}
+			}
+
+			if(inconsistent)
+			{
+				char const * const ir_log_text_format =
+				\" ]\";
+
+				fprintf
+				( inconsistent_test_results_log
+				, ir_log_text_format
+				);
+
+				printf
+				( ir_log_text_format
+				);
+			}
+		}
+	}
+
+
+	/* WARNING: AT THE CURRENT STAGE OF DEVELOPMENT,
+	   THERE IS NO WAY TO DETECT INCONSISTENT TEST RESULTS.
+
+	   IN THE ORIGINAL HANAMAKE PROTOTYPE (A YEAR BEFORE IT EVEN HAD ITS NAME),
+	   EVERY USER FUNCTION WAS IMPLICITLY BOUND TO A TEST INCLUDED IN THE SAME
+	   IMPLEMENTATION FILE, BEARING THE SAME NAME AS THE USER FUNCTION,
+	   PREFIXED WITH 'test_'.
+
+	   THIS RESTRICTION MADE CLEAR THE CONNECTION BETWEEN USER FUNCTION AND
+	   UNIT TEST.
+
+	   FURTHER, THE PROTOTYPE COULD ONLY BE USED WITH C CODE, NOT C++.
+
+	   IN ORDER TO MAKE HANAMAKE A MORE FLEXIBLE, EASY TO ADOPT AND USE
+	   UTILITY, THESE AND OTHER RESTRICTIONS WERE LIFTED.
+
+	   HOWEVER, THIS BORE 2 IMPORTANT CONSEQUENCES
+
+	   - AMBIGUITY AS TO WHAT A TEST IS ACTUALLY TESTING, AND
+	   - C++ NAMESPACE (AND SUCH DEPTH) AMBIGUITY
+
+	   THE CURRENT SCHEME TO DEFINE A TEST IN HANAMAKE IS VIA A MACRO:
+	   'hanamake_test(your_test_name)', WHICH EVALUATES TO:
+	   '__hanamade_test__your_test_name'.
+
+	   EVEN IF THE 1ST CONSEQUENCE IS RESOLVED BY RESTRICTING TEST NAMES TO
+	   FUNCTION SIGNATURES, AND CREATING A HANAMADE NAMESPACE
+
+	     ( __hanamade_test__CPP_namespace::function(...)
+
+		   would potentially require a new namespace for every C++ function at
+		   minimum.
+
+		   __hanamade_test__::CPP_namespace::function(...)
+
+		   reduces the global namespace issue to only a single global namespace
+	     )
+
+	   THIS DOES NOT SOLVE THE ISSUE OF NAMESPACE DECLARATIONS
+
+	     ( To define a member of a namespace, you must declare the namespace
+		   as so:
+
+	       namespace NS1 { member_name; }
+
+		   namespace NS1 { CPP_namespace::function(...); }
+
+		   is invalid--it must be declared as
+
+		   namespace NS1 { namespace CPP_namespace { type function(...); } }
+
+		   This is not viable in general with a macro alone--it fundamentally
+		   requires ** some form of ** parsing the C++ source code in advance
+		   to achieve via macro.
+	     )
+	*/
+
+	if(consistent)
+	{
+		char const * const consistent_results_message =
+		\"\n  CONSISTENT -- Your code test results are consistent with each other.\"
+		\"\n\"
+		\"\n                Specifically, no function whose test passed\"
+		\"\n                depends upon a function whose test failed.\n\"
+		;
+
+		/* DO NOT PRINT TO LOG. THE RESULTS ARE CONSISTENT. REMOVE THE LOG. */
+
+		remove(\"inconsistent-test-results.log\");
+
+		printf(consistent_results_message);
+	}
+	else
+	{
+		char const * const ir_log_text_format = \"\n\"
+		\"\n  INCONSISTENT -- Your code test results are NOT consistent with each other.\"
+		\"\n\"
+		\"\n                  Specifically, some functions whose tests passed\"
+		\"\n                  depend upon functions whose tests failed.\n\"
+		;
+
+		fprintf
+		( inconsistent_test_results_log
+		, ir_log_text_format
+		);
+
+		printf
+		( ir_log_text_format
+		);
+	}
+
+	fclose(inconsistent_test_results_log);
+
+
+	printf(\"\n- Valgrind Memcheck Result...\n\");
 
 	return 0;
 }
