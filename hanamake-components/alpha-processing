@@ -96,8 +96,15 @@ first() { echo "${1}" | cut -c 1; }  # Define a function called 'first' that
 while test ${#} -gt 1  # While the number of parameters is greater than 1
 do                     # Do the following:
                          #
-  if test "${1}" = -s    # If the 1st parameter is '-s'
-  then                   # Then (the user has specified a source-directory)
+  if ! test "${1}" = -s  # If the 1st parameter is NOT '-s'
+                         # (When there are multiple parameters)
+                         #
+  then                   # Then (the user has made an error)
+                           #
+    1>&2 echo "${Usage}"   # echo the supported command usage text
+    exit 1                 # terminate the program
+                           #
+  else                   # Otherwise (the user has specified a source-directory)
                            #
                            # (The backslash denotes a line continuation)
     if test \
@@ -105,15 +112,13 @@ do                     # Do the following:
     then                   # Then (the user made an error entering the command)
                              #
       1>&2 echo "${Usage}"   # echo the supported command usage text
-      exit 1                 # exit with error code 1, ending the program
+      exit 2                 # terminate the program
                              #
     elif test "${2}" = /   # Otherwise, if the 2nd parameter is a slash, '/',
     then                   # Then (since the program is unable to process root)
 
       1>&2 echo "hanamake:  cannot process '/' as a source directory"
-      exit 2
-
-      # exit the program with error code 2 ('exit' always ends the program)
+      exit 3
 
     fi                     # Finish (end of inner inner conditional)
 
@@ -143,12 +148,12 @@ do                     # Do the following:
     if ! test -e "${realpath}"; then issue="does not exist"; fi
 
     if ! test "${issue}" = "hakuna matata"   # If things are not "hakuna matata"
-    then                                     # Then
+    then                                     # Then notify the user
 
       1>&2 echo "hanamake:  specified <source-directory> '${2}'"
       1>&2 echo "           ${issue}."
-
-      exit 3                                 # exit program with error code 3
+                                             #
+      exit 4                                 # and terminate the program
                                              #
     else                                     # Otherwise
 
@@ -156,13 +161,13 @@ do                     # Do the following:
 
       if test -L "source-link${realpath}"    # Does this symbolic link already
                                              # exist?
-      then                                   # Then notify user of duplicate
-                                             # and exit
+      then                                   # Then notify the user
+                                             # and terminate the program
                                              #
         issue="cannot process duplicate <source-directory> inputs"
         1>&2 echo "hanamake:  ${issue}."
         1>&2 echo "           (duplicate was '${2}')"
-        exit 4
+        exit 5
                                              #
       fi                                     # Fi
 
@@ -197,15 +202,15 @@ do                     # Do the following:
 
     fi                                       # Fi
                          # # # # # # # # # # #
-  else                   # Wow, a lot happened since the top of the loop!
-                           # Essentially, this ELSE section is a detection
-    1>&2 echo "${Usage}"   # for their being 2 parameters, and the first
-                           # is NOT '-s', which is an error--
-                           # notify the user
-    exit 5                 # and exit
-                           #
   fi                     # Fi
                          #
-  shift 2                # Remove the first 2 parameters and move the others up
+  shift 2                # Replace the first 2 parameters with the next 2
                          #
-done                   # Done (end of conditional loop)
+done                   # If the condition for 'while' at the top of the loop is
+                       # false
+                       # --
+                       #   when the number of parameters remaining is
+                       #   less than 2
+                       # --
+                       # then proceed onward. Otherwise repeat the loop.
+                       # Each loop will reduce the parameters remaining by 2.
