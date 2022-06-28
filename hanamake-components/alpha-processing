@@ -32,15 +32,28 @@ print_hanamade_reservation_notice()
   1>&2 echo "hanamake:  the file-path name 'hanamade' is reserved by hanamake."
   1>&2 echo
   1>&2 echo "           However, if you need to use that name for some reason,"
-  1>&2 echo "           you can locally patch the ONE AND ONLY, ASCII encoded,"
-  1>&2 echo "           POSIX shell script that uses it:"
+  1>&2 echo "           the POSIX shell script that requires it--"
   1>&2 echo
-  1>&2 echo "           $(realpath -P "$(command -v hanamake)")"
+  1>&2 echo "           '$(realpath -P "$(command -v hanamake)")'"
   1>&2 echo
-  1>&2 echo "           The pattern 'hanamade' only meaningfully occurs in a"
-  1>&2 echo "           few places throughout the file, so patching should be"
-  1>&2 echo "           relatively easy, even for a beginner making the edits"
-  1>&2 echo "           manually."
+  1>&2 echo "           --can be patched to use a different name. Note that"
+  1>&2 echo "           THIS IS NOT SUPPORTED and is only a suggestion if"
+  1>&2 echo "           you find yourself in a bind."
+  1>&2 echo
+  1>&2 echo "           Disclaimer aside,"
+  1>&2 echo "           such a patch might be automated via a stream edit:"
+  1>&2 echo
+  1>&2 echo "           cp \\"
+  1>&2 echo "           '$(realpath -P "$(command -v hanamake)")' \\"
+  1>&2 echo "           '$(realpath -P "$(command -v hanamake)")'.bup"
+  1>&2 echo "           sed -i 's/ hanamade/ some-other-name/g' \\"
+  1>&2 echo "           '$(realpath -P "$(command -v hanamake)")'"
+  1>&2 echo
+  1>&2 echo "           And if later needed, undone by backup restoration:"
+  1>&2 echo
+  1>&2 echo "           mv \\"
+  1>&2 echo "           '$(realpath -P "$(command -v hanamake)")'.bup \\"
+  1>&2 echo "           '$(realpath -P "$(command -v hanamake)")'"
 }
 
 
