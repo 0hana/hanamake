@@ -185,17 +185,21 @@ do                     # Do the following:
       #
       # EMPHASIS, 'dirname /Z/' RESULTS IN '/'
       #
-      # If you didn't understand the significance of the above explanation,
-      # read it again--it's easy to miss.
-      #
       # Thus no matter what the user specifies, a directory mirroring
       # the path to the parent directory of their specified directory
       # will be created as a sub-directory of source-link
       #
       # For example,
-      # 'hanamake -s /their/directory' will create 'source-link/their',
-      # and so too will:
-      # 'hanamake -s /their/directory/'
+      # 'hanamake -s /their/directory' will first create:
+      #
+      # the directory     'source-link/their'
+      # then
+      # the symbolic link 'source-link/their/directory'
+      #
+      # 'hanamake -s /their/directory/' (with a slash at the end)
+      #
+      # will do the same thing
+      # (a trailing slash in the input does not affect the result here)
       #
       # Lastly, we make a symbolic link to the realpath of the specified
       # directory, from a mirrored path under source-link
