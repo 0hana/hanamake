@@ -1,0 +1,154 @@
+#!/bin/sh
+#  Copyright (C) 2022 Hanami Zero
+#
+#  This file is part of hanamake,
+#  a C and C++ development utility.
+#
+#  hanamake is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License --
+#  the superset of version 3 of the GNU General Public License --
+#  as published by the Free Software Foundation.
+#
+#  hanamake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty
+#  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
+
+hanamake -s .
+result=${?}
+
+if ! test ${result} -eq 6
+then exit 1
+fi
+
+hanamake -s ..
+result=${?}
+
+if ! test ${result} -eq 6
+then exit 1
+fi
+
+hanamake -s "$(pwd)/../.."
+result=${?}
+
+if ! test ${result} -eq 6
+then exit 1
+fi
+
+hanamake -s /
+result=${?}
+
+if ! test ${result} -eq 6
+then exit 1
+fi
+
+hanamake -s / .. .
+result=${?}
+
+if ! test ${result} -eq 6
+then exit 1
+fi
+
+
+mkdir -p 1/2/3 4/5/6
+>1/code.c     printf "%s\n" "void dir_1_code() {}"
+>1/2/code.c   printf "%s\n" "void dir_2_code() {}"
+>1/2/3/code.c printf "%s\n" "void dir_3_code() {}"
+>4/code.c     printf "%s\n" "void dir_4_code() {}"
+>4/5/code.c   printf "%s\n" "void dir_5_code() {}"
+>4/5/6/code.c printf "%s\n" "void dir_6_code() {}"
+
+
+hanamake -s 1 4
+result=${?}
+
+if ! test $((result % 128)) -eq 0
+then exit 1
+fi
+
+hanamake -s 1/2 4
+result=${?}
+
+if ! test $((result % 128)) -eq 0
+then exit 1
+fi
+
+hanamake -s 1/2/3 4
+result=${?}
+
+if ! test $((result % 128)) -eq 0
+then exit 1
+fi
+
+hanamake -s 1 4/5
+result=${?}
+
+if ! test $((result % 128)) -eq 0
+then exit 1
+fi
+
+hanamake -s 1/2 4/5
+result=${?}
+
+if ! test $((result % 128)) -eq 0
+then exit 1
+fi
+
+hanamake -s 1/2/3 4/5
+result=${?}
+
+if ! test $((result % 128)) -eq 0
+then exit 1
+fi
+
+hanamake -s 1 4/5/6
+result=${?}
+
+if ! test $((result % 128)) -eq 0
+then exit 1
+fi
+
+hanamake -s 1/2 4/5/6
+result=${?}
+
+if ! test $((result % 128)) -eq 0
+then exit 1
+fi
+
+hanamake -s 1/2/3 4/5/6
+result=${?}
+
+if ! test $((result % 128)) -eq 0
+then exit 1
+fi
+
+hanamake -s 1/2 1
+result=${?}
+
+if ! test ${result} -eq 6
+then exit 1
+fi
+
+hanamake -s 1 1/2
+result=${?}
+
+if ! test ${result} -eq 6
+then exit 1
+fi
+
+hanamake -s 1/2/3 1
+result=${?}
+
+if ! test ${result} -eq 6
+then exit 1
+fi
+
+hanamake -s 1/2/3 1/2
+result=${?}
+
+if ! test ${result} -eq 6
+then exit 1
+fi

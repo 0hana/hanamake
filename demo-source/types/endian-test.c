@@ -18,21 +18,6 @@
 
 #include "0hana/types.h"
 
-int16_t const * const big_endian = ((int16_t const * const)" ");
-
-void endian_mirror
-( size_t bytes
-, byte * datum
-)
-{
-  while ( bytes-- > 1 )
-  {
-    byte X         = datum[bytes];
-    datum[bytes--] = *datum;
-    *datum++       = X;
-  }
-}
-
 #ifdef hanamake_test
 hanamake_test(endian_mirror)
 {

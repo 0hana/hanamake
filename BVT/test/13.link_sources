@@ -1,0 +1,54 @@
+#!/bin/sh
+#  Copyright (C) 2022 Hanami Zero
+#
+#  This file is part of hanamake,
+#  a C and C++ development utility.
+#
+#  hanamake is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License --
+#  the superset of version 3 of the GNU General Public License --
+#  as published by the Free Software Foundation.
+#
+#  hanamake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty
+#  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
+
+mkdir source 1 2 3 4
+
+hanamake
+result=${?}
+
+if ! test -d hanamade/source-link/source \
+|| ! test -L hanamade/source-link/source \
+|| ! test $(find hanamade/source-link -type l | wc -l) -eq 1
+then exit 1
+fi
+
+hanamake -s source
+result=${?}
+
+1>&2 tree hanamade/source-link
+
+if ! test -d hanamade/source-link"$(realpath -- source)" \
+|| ! test $(find hanamade/source-link -type l | wc -l) -eq 1
+then exit 1
+fi
+
+hanamake -s 1 2 3 4
+result=${?}
+
+if ! test -d hanamade/source-link"$(realpath 1)" \
+|| ! test -L hanamade/source-link"$(realpath 1)" \
+|| ! test -d hanamade/source-link"$(realpath 2)" \
+|| ! test -L hanamade/source-link"$(realpath 2)" \
+|| ! test -d hanamade/source-link"$(realpath 3)" \
+|| ! test -L hanamade/source-link"$(realpath 3)" \
+|| ! test -d hanamade/source-link"$(realpath 4)" \
+|| ! test -L hanamade/source-link"$(realpath 4)" \
+|| ! test $(find hanamade/source-link -type l | wc -l) -eq 4
+then exit 1
+fi

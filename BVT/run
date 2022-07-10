@@ -1,0 +1,103 @@
+#!/bin/sh
+#  Copyright (C) 2022 Hanami Zero
+#
+#  This file is part of hanamake,
+#  a C and C++ development utility.
+#
+#  hanamake is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License --
+#  the superset of version 3 of the GNU General Public License --
+#  as published by the Free Software Foundation.
+#
+#  hanamake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty
+#  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
+
+run_directory="$(pwd)"
+log="${run_directory}/log"
+mkdir -p "${log}"
+
+
+#  Make a temporary directory to compare `ls /tmp` before and after
+
+before_and_after="$(mktemp -d)"
+>"${before_and_after}/1" ls -1A "${TMPDIR-/tmp}"
+
+trap \
+'
+>"${before_and_after}/2" ls -1A "${TMPDIR-/tmp}"
+
+if ! diff "${before_and_after}/1" "${before_and_after}/2"
+
+# `diff` returns 1
+# if different and
+# 0 if the same
+
+then
+
+  printf "%s\n" "hanamake BVT:  Warning: temporary files not deleted."
+
+fi
+
+rm -r "${before_and_after}"
+' \
+EXIT
+
+
+#  Define tests
+
+tests=\
+"\
+$(\
+find test -type f | \
+sed 's/^test\///' | \
+sort -g -k 1 -t . | \
+sed \
+'s#\(.*\)#\
+test_path="$(realpath "test/\1")"; \
+temp_directory="$(mktemp -d)"; \
+cd "${temp_directory}" \\\
+|| \\\
+{ rmdir "${temp_directory}"; \
+  printf "hanamake BVT:  %s\\nhanamake BVT:  %s\\n" \\\
+  "Failed to make temp directory for \1" \\\
+  "Aborting."; \
+   exit 1; \
+}; \
+\
+if test ${number} -lt 10; \
+then sub10=" "; \
+else sub10=""; \
+fi; \
+\
+if test ${number} -eq 12; \
+then \
+  printf "\\n  Proceeding to next section of BVT...\\n\\n"\; \
+fi; \
+\
+if >"${log}/\1" 2>"${log}/\1" sh -x "${test_path}"; \
+then printf "hanamake BVT:  passed %s\\n" "${sub10}\1"; rm "${log}/\1"; \
+else printf "hanamake BVT:  FAILED %s\\n" "${sub10}\1"; \
+fi; \
+rm -r "${temp_directory}"; \
+cd "${run_directory}" \\\
+|| \\\
+{ printf "hanamake BVT:  %s\\nhanamake BVT:  %s\\n" \\\
+  "Run directory is missing!" \\\
+  "Aborting."; \
+  exit 2; \
+}; \
+number=$((number + 1)); \
+#'\
+)\
+"
+
+
+#  Evaluate tests
+
+number=0
+eval "${tests}"

@@ -1,7 +1,7 @@
 #  Copyright (C) 2022 Hanami Zero
 #
 #  This file is part of hanamake,
-#  a C and C++ development testing utility.
+#  a C and C++ development utility.
 #
 #  hanamake is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU Affero General Public License --
@@ -22,12 +22,12 @@
 # Identify target files
 
 source_files := \
-  $(shell 2>/dev/null find -H source \( -name '*.c' -o -name '*.cpp' \) -type f)
+  $(shell 2>/dev/null find -L source-link \( -name '*.c' -o -name '*.cpp' \) -type f)
 
 
 object_files := \
-  $(foreach source, $(filter %.c,   $(source_files)), $(source:source/%.c=build/%.o)) \
-  $(foreach source, $(filter %.cpp, $(source_files)), $(source:source/%.cpp=build/%.opp))
+  $(foreach source, $(filter %.c,   $(source_files)), $(source:source-link/%.c=build/%.o)) \
+  $(foreach source, $(filter %.cpp, $(source_files)), $(source:source-link/%.cpp=build/%.opp))
 
 
 target_files := \
@@ -103,13 +103,16 @@ hanamade_assert_definition := \
 
 ASM_INCLUSIONS = \
   -Wno-unused-value \
-  -D'hanamake_test(test_name)=$(if $(filter %.spp,$(@)), extern "C") \
-     void __hanamade_test__\#\#test_name(void)' \
+  -D'hanamake_test(function_name)= \
+     void function_name\#\#__hanamade_test__(void)' \
+  \
   -D'hanamake_assert(expression, ...)=(0)'; \
+  \
   $(if $(filter %.s, $(@)), gcc $(CFLAGS), g++ $(CPPFLAGS)) $(<) -o $(@) -S \
   -include /usr/include/stdio.h \
-  -D'hanamake_test(test_name)=$(if $(filter %.spp,$(@)), extern "C") \
-     void __hanamade_test__\#\#test_name($(hanamade_test_parameters))' \
+  -D'hanamake_test(function_name)= \
+     void function_name\#\#__hanamade_test__($(hanamade_test_parameters))' \
+  \
   -D'hanamake_assert(expression, ...)=($(hanamade_assert_definition))'
 
 
@@ -124,12 +127,12 @@ build/%.o: build/%.s
 	@gcc   -x assembler    $(<) -o $(@) -c
 
 
-build/%.s: source/%.c build/%.d
+build/%.s: source-link/%.c build/%.d
 	@echo '- Translating : $(<) -> $(@)'
 	@gcc      $(CFLAGS)    $(<) -o $(@) -S $(ASM_INCLUSIONS)
 
 
-build/%.d: source/%.c
+build/%.d: source-link/%.c
 	@echo '- Prescanning : $(<) -> $(@)'
 	@# Create additional makefile target dependencies for build/%.s files
 	@# so that if their #include "files" are updated, they will be remade
@@ -141,19 +144,19 @@ build/%.opp: build/%.spp
 	@g++   -x assembler    $(<) -o $(@) -c
 
 
-build/%.spp: source/%.cpp build/%.dpp
+build/%.spp: source-link/%.cpp build/%.dpp
 	@echo '- Translating : $(<) -> $(@)'
 	@g++     $(CPPFLAGS)   $(<) -o $(@) -S $(ASM_INCLUSIONS)
 
 
-build/%.dpp: source/%.cpp
+build/%.dpp: source-link/%.cpp
 	@echo '- Prescanning : $(<) -> $(@)'
 	@# Create additional makefile target dependencies for build/%.spp files
 	@# so that if their #include "files" are updated, they will be remade
 	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.dpp=.spp)
 
 
-formulating_script := $(hanamake_components)/formulating.sh
+formulating_script := "$(hanamake_source_code)/build-support/formulating.sh"
 
 
 0hana-main.c: $(filter %.i %.ipp, $(target_files))
@@ -198,8 +201,8 @@ csplit_script = \
     ; mv $${csplit_file} $(@)/$${function_name} \
     ; if grep -q     "$${function_name}, @function" \
     $(basename $(@))$(if $(filter %.i, $(@)),.s,.spp) \
-    ; then mkdir -p $(@:build/%=logs/%) \
-      &&   touch    $(@:build/%=logs/%)/$${function_name}.log \
+    ; then mkdir -p $(@:build/%=log/%) \
+      &&   touch    $(@:build/%=log/%)/$${function_name}.log \
     ; else rm       $(@)/$${function_name} \
     ; fi \
   \

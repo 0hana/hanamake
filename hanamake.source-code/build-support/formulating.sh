@@ -1,7 +1,7 @@
 #  Copyright (C) 2022 Hanami Zero
 #
 #  This file is part of hanamake,
-#  a C and C++ development testing utility.
+#  a C and C++ development utility.
 #
 #  hanamake is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU Affero General Public License --
@@ -21,7 +21,7 @@
 /* Copyright (C) 2022 Hanami Zero
 
    This file is part of hanamake,
-   a C and C++ development testing utility.
+   a C and C++ development utility.
 
    hanamake is free software: you can redistribute it and/or modify
    it under the terms of the GNU Affero General Public License --
@@ -44,7 +44,7 @@
 "
 
 # Insert unit test declarations
-test_names="$(basename -a ${2} | grep '^__hanamade_test__')"
+test_names="$(basename -a ${2} | grep '__hanamade_test__$')"
 for name in ${test_names}
 do
 >>${1} echo "void ${name}"
@@ -108,7 +108,7 @@ longest_base=0
 for name in $(basename -a ${2})
 do
 	name_length=$(printf ${name} | wc -m)
-	if test -n "$(echo   ${name} | grep '^__hanamade_test__')"
+	if test -n "$(echo   ${name} | grep '__hanamade_test__$')"
 	then name_length=$((${name_length} - ${hanamade_test_prefix_length} + ${translation_length}))
 	fi
 	if test ${name_length} -gt ${longest_base}
@@ -122,20 +122,21 @@ do
 	base=$(basename ${identity})
 	base_length=$(printf ${base} | wc -m)
 	# name string
-	if test -n "$(echo ${base} | grep '^__hanamade_test__')"
+	if test -n "$(echo ${base} | grep '__hanamade_test__$')"
 	then
 	base_length=$((${base_length} - ${hanamade_test_prefix_length} + ${translation_length}))
-	>>${1} echo "  { \"$(for i in $(seq $((${longest_base} - ${base_length}))); do printf ' '; done)$(echo "${base}" | sed 's/^__hanamade_test__//')\""
+	>>${1} echo "  { \"$(for i in $(seq $((${longest_base} - ${base_length}))); do printf ' '; done)$(echo "${base}" | sed 's/__hanamade_test__$//')\""
 	else
 	>>${1} echo "  { \"$(for i in $(seq $((${longest_base} - ${base_length}))); do printf ' '; done)${base}\""
 	fi
 
-	>>${1} echo "  , \"$(echo ${identity}.log | sed 's/^build\//logs\//')\""  # log_path string
+	>>${1} echo "  , \"$(echo ${identity}.log | sed 's/^build\//log\//')\""
+	                                       # log_path string
 	>>${1} echo "  , NULL"                 # log_file FILE pointer
 	>>${1} echo "  , NULL"                 # dependency
 	>>${1} echo "  , 0"                    # dependencies
 
-	if test -n "$(echo ${base} | grep '^__hanamade_test__')"
+	if test -n "$(echo ${base} | grep '__hanamade_test__$')"
 	then
 	>>${1} echo "  , ${base}"              # __hanamade_test__ function pointer
 	else
@@ -243,7 +244,7 @@ int main(void)
 	printf(\"\n- Determining (re)test rationale...\n\");
 
 	/* Check for source file updates
-	   (empty logs in logs/%.i(pp) produced by make) */
+	   (empty logs in log/%.i(pp) produced by make) */
 
 	for(size_t index = 0; index < code_objects; index++)
 	{
@@ -348,7 +349,8 @@ int main(void)
 				printf(\"\n  %s%s  [ updated ]\", (coi[index].__hanamade_test__ ? \"(test)  \" : \"\"), coi[index].name);
 				updates++;
 
-				if(coi[index].__hanamade_test__) { tests_required_to_run++; }
+				if(coi[index].__hanamade_test__)
+				{ tests_required_to_run++; }
 				break;
 
 			case depends:
@@ -367,13 +369,15 @@ int main(void)
 
 				printf(\" ]\");
 
-				if(coi[index].__hanamade_test__) tests_required_to_run++;
+				if(coi[index].__hanamade_test__)
+				{ tests_required_to_run++; }
 				break;
 
 			case  failed:
 				printf(\"\n  %s%s  [ failing ]\", (coi[index].__hanamade_test__ ? \"(test)  \" : \"\"), coi[index].name);
 
-				if(coi[index].__hanamade_test__) tests_required_to_run++;
+				if(coi[index].__hanamade_test__)
+				{ tests_required_to_run++; }
 				break;
 
 			case  passed: /* do nothing */

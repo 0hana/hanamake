@@ -1,0 +1,7 @@
+#  Run:  gdb -tui -q -x <this-file> 0hana-main
+
+define hook-stop
+refresh
+end
+
+#  This keeps the display from getting all messed up

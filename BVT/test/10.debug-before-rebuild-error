@@ -1,0 +1,81 @@
+#!/bin/sh
+#  Copyright (C) 2022 Hanami Zero
+#
+#  This file is part of hanamake,
+#  a C and C++ development utility.
+#
+#  hanamake is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License --
+#  the superset of version 3 of the GNU General Public License --
+#  as published by the Free Software Foundation.
+#
+#  hanamake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty
+#  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
+
+mkdir hanamade
+touch hanamade/0hana-main.log
+mkdir hanamade/source-link
+mkdir source
+ln -s ../../source hanamade/source-link/source
+
+
+> source/code.c printf "%s\n" "void code(void) {}"
+# check .c trigger
+hanamake debug; result=${?}
+if ! test ${result} -eq 10; then exit 1; fi
+
+
+rm source/code.c
+> source/code.cpp printf "%s\n" "void code(void) {}"
+# check .cpp trigger
+hanamake debug; result=${?}
+if ! test ${result} -eq 10; then exit 1; fi
+
+
+rm source/code.cpp
+> source/code.h printf "%s\n" "void code(void) {}"
+# check .h trigger
+hanamake debug; result=${?}
+if ! test ${result} -eq 10; then exit 1; fi
+
+
+rm source/code.h
+> source/code.hpp printf "%s\n" "void code(void) {}"
+# check .hpp trigger
+hanamake debug; result=${?}
+if ! test ${result} -eq 10; then exit 1; fi
+
+
+2>/dev/null cp -Lr \
+hanamade/source-link \
+hanamade/previous-source-link  # There exists a single .h file
+
+> source/code.c printf "%s\n" "void code(void) {}"
+# check .[ch] trigger
+hanamake debug; result=${?}
+if ! test ${result} -eq 10; then exit 1; fi
+
+
+rm -r hanamade/previous-source-link
+2>/dev/null cp -Lr \
+hanamade/source-link \
+hanamade/previous-source-link
+
+> source/code.c printf "%s\n" "int code(void) { return 0; }"
+# check .c update trigger
+hanamake debug; result=${?}
+if ! test ${result} -eq 10; then exit 1; fi
+
+
+rm -r hanamade/previous-source-link
+2>/dev/null cp -Lr \
+hanamade/source-link \
+hanamade/previous-source-link
+# now all previous equals current -- should exit 0
+hanamake debug; result=${?}
+if ! test ${result} -eq 0; then exit 1; fi
