@@ -40,7 +40,7 @@ Usage: hanamake [ -s <source-directory> ... ]
 #
 #  And 'validate()' command input (determines operating mode)
 
-. "$(command -v hanamake).source-code/launch-support/stage-2.sh" "${@}"
+. "$(command -v hanamake).source-code/launch-support/stage-2.sh"
 
 
 #  Process debug support code in launch-support/debug.sh
@@ -48,7 +48,7 @@ Usage: hanamake [ -s <source-directory> ... ]
 if test "${mode}" = debug
 then
 
-  . "$(command -v hanamake).source-code/launch-support/debug.sh" "${@}"
+  . "$(command -v hanamake).source-code/launch-support/debug.sh"
   exit
 
 fi
@@ -74,7 +74,7 @@ cd hanamade
 
 #  Import and execute Stage-3 source linking support code:
 
-. "$(command -v hanamake).source-code/launch-support/stage-3.sh" "${@}"
+. "$(command -v hanamake).source-code/launch-support/stage-3.sh"
 
 
 #  Import and execute Stage-4 time protection support code:
