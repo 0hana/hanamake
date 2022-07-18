@@ -18,6 +18,7 @@
 #  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
 
 mode=alpha  # Default operating mode -- Execute Everything
+            # Determine ultimate operating mode during 'validate()'
 
 validate()
 {

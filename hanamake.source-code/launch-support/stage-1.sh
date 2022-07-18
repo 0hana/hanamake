@@ -57,7 +57,7 @@ inform_hanamade_reserved()
     "the POSIX shell scripts that require it--" \
     "" \
     "'$(realpath -- "${0}")'" \
-    "'$(command -v hanamake).source-code/alpha-support/stage-'[1-5]'.sh'" \
+    "'$(command -v hanamake).source-code/launch-support/stage-'[1-5]'.sh'" \
     "" \
     "--can be patched to use a different name. Note that" \
     "THIS IS NIETHER SUPPORTED NOR RECOMMENDED NOR A GRANT OF PERMISSION." \
@@ -67,7 +67,7 @@ inform_hanamade_reserved()
     "" \
     "sed -i.bup -s 's/ hanamade/ some-other-name/g' \\" \
     "'$(realpath -- "${0}")' \\" \
-    "'$(command -v hanamake).source-code/alpha-support/stage-'[1-5]'.sh'" \
+    "'$(command -v hanamake).source-code/launch-support/stage-'[1-5]'.sh'" \
     "" \
     "And if later needed, undone by backup restoration:" \
     "" \
@@ -76,7 +76,7 @@ inform_hanamade_reserved()
     "" \
     "restore_hanamake_backups \\" \
     "'$(realpath -- "${0}")' \\" \
-    "'$(command -v hanamake).source-code/alpha-support/stage-'[1-5]'.sh'"
+    "'$(command -v hanamake).source-code/launch-support/stage-'[1-5]'.sh'"
 }
 
 

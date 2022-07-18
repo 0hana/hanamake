@@ -31,7 +31,7 @@ Usage: hanamake [ -s <source-directory> ... ]
 #
 #  And execute 'hanamade' reservation checks
 
-. "$(command -v hanamake).source-code/alpha-support/stage-1.sh"
+. "$(command -v hanamake).source-code/launch-support/stage-1.sh"
 
 
 #  Import Stage-2 support code:
@@ -40,15 +40,15 @@ Usage: hanamake [ -s <source-directory> ... ]
 #
 #  And 'validate()' command input (determines operating mode)
 
-. "$(command -v hanamake).source-code/alpha-support/stage-2.sh" "${@}"
+. "$(command -v hanamake).source-code/launch-support/stage-2.sh" "${@}"
 
 
-#  Process debug support code in alpha-support/debug.sh
+#  Process debug support code in launch-support/debug.sh
 
 if test "${mode}" = debug
 then
 
-  . "$(command -v hanamake).source-code/alpha-support/debug.sh" "${@}"
+  . "$(command -v hanamake).source-code/launch-support/debug.sh" "${@}"
   exit
 
 fi
@@ -74,17 +74,17 @@ cd hanamade
 
 #  Import and execute Stage-3 source linking support code:
 
-. "$(command -v hanamake).source-code/alpha-support/stage-3.sh" "${@}"
+. "$(command -v hanamake).source-code/launch-support/stage-3.sh" "${@}"
 
 
 #  Import and execute Stage-4 time protection support code:
 
-. "$(command -v hanamake).source-code/alpha-support/stage-4.sh"
+. "$(command -v hanamake).source-code/launch-support/stage-4.sh"
 
 
 #  Import and execute Stage-5 test log maintenance support code:
 
-. "$(command -v hanamake).source-code/alpha-support/stage-5.sh"
+. "$(command -v hanamake).source-code/launch-support/stage-5.sh"
 
 
 #  Invoke the hanamake internal makefile
@@ -109,13 +109,12 @@ if 2>&1 valgrind \
 \
 && ! grep -q '\[ FAILED \]'     0hana-main.log \
 &&   grep -q 'ERROR SUMMARY: 0' 0hana-main.log \
-&& rm 0hana-main.log
-then
+&& rm 0hana-main.log \
+&& rm -r log
+then status=0
   echo
   echo '~ Final Result... -- PASS -- No errors encountered.'
-  rm -r log
-  status='0'
-else
+else status=128
   echo \
   | tee -a 0hana-main.log
   echo '~ Final Result... -- FAIL -- See hanamade/0hana-main.log' \
@@ -125,7 +124,6 @@ else
   >> 0hana-main.log cat "${@}"
   ' \
   '_' '{}' '+'
-  status='128'
 fi
 
 

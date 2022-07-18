@@ -17,7 +17,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
 
-shift 1  # receives the parameter list from alpha-processing
+shift 1  # receives the parameter list from launch.sh
          # including first parameter debug
 
 echo "<DEBUG MODE IN-DEVELOPMENT>"
