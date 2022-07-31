@@ -127,37 +127,6 @@ else status=128
 fi
 
 
-#  Record current state of <source-directories>
-
-rm -r previous-source-link
-mkdir previous-source-link
-find -P source-link -type l -exec sh -c \
-'
-while test ${#} -gt 0
-do
-
-  2>/dev/null find          \
-  -H "${1}"                 \
-  \( -name '\''*.[ch]'\''   \
-  -o -name '\''*.[ch]pp'\'' \
-  \) -type f                \
-  -exec sh -c               \
-  '\''
-  while test ${#} -gt 0
-  do
-
-    mkdir -p  "$(dirname "previous-${1}")"
-    cp "${1}"            "previous-${1}"
-    shift 1
-
-  done
-  '\'' "inner-find recording to previous" \{\} \+
-  shift 1
-
-done
-' "outer-find recording to previous" '{}' '+'
-
-
 #  Return exit status
 
 exit ${status}
