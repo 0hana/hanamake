@@ -17,56 +17,80 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
 
-2>/dev/null find   \
-  -L source-link   \
-  \( -name '*.c'   \
-  -o -name '*.cpp' \
-  \) -type f       \
-  -exec sh -c      \
+make_log_directories()
+{
+  find -P source-link -type l -exec sh -c \
   '
-  make_log_directories()
-  {
-    while test ${#} -gt 0
-    do
-
-      log_group="$(              \
-        printf "%s" "${1}"       \
-        | sed                    \
-        -e "s/^source-link/log/" \
-        -e "s/.c$/.i/"           \
-        -e "s/.cpp$/.ipp/"       \
-      )"
-
-      mkdir -p "$(dirname "${log_group}")"
-
-      shift 1
-
-    done
-  }
-
-  make_log_directories "${@}"
-  mv log previous_log
-  make_log_directories "${@}"
-
   while test ${#} -gt 0
   do
 
-    log_group="$(              \
-      printf "%s" "${1}"       \
-      | sed                    \
-      -e "s/^source-link/log/" \
-      -e "s/.c$/.i/"           \
-      -e "s/.cpp$/.ipp/"       \
-    )"
+    2>/dev/null find       \
+    -H "${1}"              \
+    \( -name '\''*.c'\''   \
+    -o -name '\''*.cpp'\'' \
+    \) -type f             \
+    -exec sh -c            \
+    '\''
+    while test ${#} -gt 0
+    do
 
-    if test -d "previous_${log_group}"
-    then mv    "previous_${log_group}" "${log_group}"
+      directory="$(dirname "${1}")"
+      mkdir -p "log${directory#source-link}"  # remove source-link from the
+                                              # beginning of:
+                                              #
+                                              # source-link/.../*.c(pp)
+      shift 1
+
+    done
+    '\'' \
+    "inner-find make_log_directories" \{\} \+
+
+    shift 1
+
+  done
+  ' \
+  "outer-find make_log_directories" '{}' '+'
+}
+
+make_log_directories
+mv log previous-log
+make_log_directories
+
+find -P source-link -type l -exec sh -c \
+'
+while test ${#} -gt 0
+do
+
+  2>/dev/null find       \
+  -H "${1}"              \
+  \( -name '\''*.c'\''   \
+  -o -name '\''*.cpp'\'' \
+  \) -type f             \
+  -exec sh -c            \
+  '\''
+  while test ${#} -gt 0
+  do
+
+    convert_to_log="log${1#source-link}"  # change source-link to log
+    log_c_path="${convert_to_log%pp}"     # get the log/.../*.c
+
+    pp="${convert_to_log#${log_c_path}}"  # get plusplus presence
+    log_group="${log_c_path%c}i${pp}"     # make log/.../*.i(pp)
+
+    if test -d "previous-${log_group}"
+    then mv    "previous-${log_group}" "${log_group}"
     fi
 
     shift 1
 
   done
+  '\'' \
+  "inner-find make log_groups" \{\} \+
 
-  rm -r previous_log
-  ' \
-  '_' '{}' '+'
+  shift 1
+
+done
+' \
+"outer-find make log_groups" '{}' '+'
+
+rm -r previous-log
