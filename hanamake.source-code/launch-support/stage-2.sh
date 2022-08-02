@@ -248,12 +248,18 @@ validate()
 
       if test modified = "$(
         cd hanamade
-        2>/dev/null find -L source-link \
-        \( -name '*.[ch]'   \
-        -o -name '*.[ch]pp' \
-        \) -type f          \
-        -exec sh -c         \
+        2>/dev/null find -P source-link -type l -exec sh -c \
         '
+        while test ${#} -gt 0
+        do
+
+          2>/dev/null find          \
+          -H "${1}"                 \
+          \( -name '\''*.[ch]'\''   \
+          -o -name '\''*.[ch]pp'\'' \
+          \) -type f                \
+          -exec sh -c               \
+          '\''
           while test ${#} -gt 0
           do  # For each current source file,
 
@@ -266,7 +272,7 @@ validate()
             # (modified)
 
             then printf "%s\n" "modified"
-                 return  1  # causes find to return non-zero
+                 return  1  # causes inner-find to return non-zero
 
             # Then the source code-base has been modified
             # so debugging must wait until the code-base has been retested
@@ -275,12 +281,18 @@ validate()
             fi
 
           done
+          '\'' \
+          "inner-find debug source-link update search" \{\} \+ \
+          && shift  1 \
+          || return 1  # causes outer-find to return non-zero
+
+        done
         ' \
-        '_' '{}' '+' \
+        "outer-find debug source-link update search" '{}' '+'
       )" \
       || test deleted = "$(
         cd hanamade
-        2>/dev/null find -L previous-source-link \
+        2>/dev/null find -P previous-source-link \
         \( -name '*.[ch]'   \
         -o -name '*.[ch]pp' \
         \) -type f          \
@@ -289,7 +301,7 @@ validate()
           while test ${#} -gt 0
           do  # For each previous (version of) source file,
 
-            if ! test -f "$(printf "%s\n" "${1}" | sed "s/^previous-//")"
+            if ! test -f "${1#previous-}"
 
             # If it does not have a current version
 
