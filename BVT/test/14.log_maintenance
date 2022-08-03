@@ -17,10 +17,12 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
 
-mkdir hanamade/source-link
 mkdir source
-
->source/code.c printf "%s\n" "void code(void) {}"
+>source/code.c printf "%s\n" \
+"\
+void code(void) {}
+hanamake(code) { hanamake_assert(0 == 1); }
+"
 hanamake
 if ! test -d "hanamade/log/source"; then exit 1; fi
 

@@ -57,7 +57,7 @@ find -P source-link -type l -exec sh -c \
 while test ${#} -gt 0
 do
 
-  2>/dev/null find          \
+  find                      \
   -H "${1}"                 \
   \( -name '\''*.[ch]'\''   \
   -o -name '\''*.[ch]pp'\'' \
@@ -121,7 +121,7 @@ find -P source-link -type l -exec sh -c \
 while test ${#} -gt 0
 do
 
-  2>/dev/null find          \
+  find                      \
   -H "${1}"                 \
   \( -name '\''*.[ch]'\''   \
   -o -name '\''*.[ch]pp'\'' \

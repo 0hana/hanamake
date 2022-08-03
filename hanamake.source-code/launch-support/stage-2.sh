@@ -282,21 +282,22 @@ validate()
 
           done
           '\'' \
-          "inner-find debug source-link update search" \{\} \+ \
+          "inner-find debug source-link _modified_ files search" \{\} \+ \
           && shift  1 \
           || return 1  # causes outer-find to return non-zero
 
         done
         ' \
-        "outer-find debug source-link update search" '{}' '+'
+        "outer-find debug source-link _modified_ files search" '{}' '+'
       )" \
       || test deleted = "$(
         cd hanamade
-        2>/dev/null find -P previous-source-link \
-        \( -name '*.[ch]'   \
-        -o -name '*.[ch]pp' \
-        \) -type f          \
-        -exec sh -c         \
+        2>/dev/null find        \
+        -P previous-source-link \
+        \( -name '*.[ch]'       \
+        -o -name '*.[ch]pp'     \
+        \) -type f              \
+        -exec sh -c             \
         '
           while test ${#} -gt 0
           do  # For each previous (version of) source file,
@@ -316,7 +317,7 @@ validate()
 
           done
         ' \
-        '_' '{}' '+' \
+        "find debug source-link _deleted_ files search" '{}' '+' \
       )"
       then
 
