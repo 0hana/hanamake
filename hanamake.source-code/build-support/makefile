@@ -22,7 +22,17 @@
 # Identify target files
 
 source_files := \
-  $(shell 2>/dev/null find -L source-link \( -name '*.c' -o -name '*.cpp' \) -type f)
+  $(shell \
+    find -P source-link -type l -exec sh -c \
+    ' : \
+    ; while test $${#} -gt 0 \
+    ; do : \
+      ; find -H "$${1}" \( -name '\''*.c'\'' -o -name '\''*.cpp'\'' \) -type f \
+      ; shift 1 \
+    ; done \
+    ' \
+    "makefile-find source_files" '{}' '+' \
+   )
 
 
 object_files := \
@@ -52,6 +62,9 @@ $(foreach target, \
   $(target_files), \
   $(shell test -e 'previous_$(target)' && mv 'previous_$(target)' '$(target)') \
 )
+#    the 'test -e' is for the *.i(pp) targets, which are actually directories
+#        'test -e' tests for (e)ither a directory or normal file
+
 $(shell rm -r previous_build \
   $(if \
     $(shell find previous_build \( -name '*.[dios]' -o -name '*.[dios]pp' \)), \
