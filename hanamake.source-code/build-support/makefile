@@ -1,7 +1,7 @@
 #  Copyright (C) 2022 Hanami Zero
 #
 #  This file is part of hanamake,
-#  a C and C++ development utility.
+#  a beginner-friendly unit testing framework utility for C and C++
 #
 #  hanamake is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU Affero General Public License --
@@ -131,39 +131,49 @@ ASM_INCLUSIONS = \
 
 # General build instructions
 0hana-main: $(object_files) 0hana-main.c
-	@echo '+  Compiling  : $(@)'
-	@gcc    $(LINK_FLAGS)  $(^) -o $(@)
+	@echo '+  Compiling  : hanamade/$(@)'
+	@echo '---------------'
+	@gcc    $(LINK_FLAGS)  $(^) -o  $(@)
+
+
+source_to_build = $(shell realpath --relative-base=.. "$(<)") \
+  -> hanamade/build/.../$(notdir $(@))
+
+build_to_build = \
+  hanamade/build/$(patsubst /%,%,$(shell \
+  realpath --relative-base=.. "$(dir $(<:build%=%))"))/$(notdir $(<)) \
+  -> .../$(notdir $(@))
 
 
 build/%.o: build/%.s
-	@echo '- Mechanizing : $(<) -> $(@)'
+	@echo '- Mechanizing : $(build_to_build)'
 	@gcc   -x assembler    $(<) -o $(@) -c
 
 
 build/%.s: source-link/%.c build/%.d
-	@echo '- Translating : $(<) -> $(@)'
+	@echo '- Translating : $(source_to_build)'
 	@gcc      $(CFLAGS)    $(<) -o $(@) -S $(ASM_INCLUSIONS)
 
 
 build/%.d: source-link/%.c
-	@echo '- Prescanning : $(<) -> $(@)'
+	@echo '- Prescanning : $(source_to_build)'
 	@# Create additional makefile target dependencies for build/%.s files
 	@# so that if their #include "files" are updated, they will be remade
 	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.d=.s)
 
 
 build/%.opp: build/%.spp
-	@echo '- Mechanizing : $(<) -> $(@)'
+	@echo '- Mechanizing : $(build_to_build)'
 	@g++   -x assembler    $(<) -o $(@) -c
 
 
 build/%.spp: source-link/%.cpp build/%.dpp
-	@echo '- Translating : $(<) -> $(@)'
+	@echo '- Translating : $(source_to_build)'
 	@g++     $(CPPFLAGS)   $(<) -o $(@) -S $(ASM_INCLUSIONS)
 
 
 build/%.dpp: source-link/%.cpp
-	@echo '- Prescanning : $(<) -> $(@)'
+	@echo '- Prescanning : $(source_to_build)'
 	@# Create additional makefile target dependencies for build/%.spp files
 	@# so that if their #include "files" are updated, they will be remade
 	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.dpp=.spp)
@@ -173,8 +183,9 @@ formulating_script := "$(hanamake_source_code)/build-support/formulating.sh"
 
 
 0hana-main.c: $(filter %.i %.ipp, $(target_files))
-	@echo '- Formulating : $(@)'
-	@sh    $(formulating_script)   $(@) \
+	@echo '---------------'
+	@echo '- Formulating : hanamade/$(@)'
+	@sh    $(formulating_script)    $(@) \
 	"\
 	$$(for directory in $(^)\
 	  ; do :\
@@ -195,7 +206,7 @@ formulating_script := "$(hanamake_source_code)/build-support/formulating.sh"
 # In the meantime, remove and remake build/%.i(pp) directories per source update
 
 remove_and_remake_script = \
-  echo '- Subdividing : $(<) -> $(@)'; rm -rf $(@) && mkdir $(@)
+  echo '- Subdividing : $(build_to_build)'; rm -rf $(@) && mkdir $(@)
 
 
 # Split build/%.s(pp) files into partial assembly files under build/%.i(pp)
