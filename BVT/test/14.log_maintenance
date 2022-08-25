@@ -24,17 +24,17 @@ void code(void) {}
 hanamake(code) { hanamake_assert(0 == 1); }
 "
 hanamake
-if ! test -d "hanamade/log/source"; then exit 1; fi
+if ! test -d hanamade/log"$(realpath -- source)"; then exit 1; fi
 
 
 mkdir source/subdirectory
 >source/subdirectory/code.c printf "%s\n" "void code(void) {}"
 hanamake
-if ! test -d "hanamade/log/source"; then exit 2; fi
-if ! test -d "hanamade/log/source/subdirectory"; then exit 3; fi
+if ! test -d hanamade/log"$(realpath -- source)"; then exit 2; fi
+if ! test -d hanamade/log"$(realpath -- source/subdirectory)"; then exit 3; fi
 
 
 rm -r source/subdirectory
 hanamake
-if ! test -d "hanamade/log/source"; then exit 4; fi
-if   test -d "hanamade/log/source/subdirectory"; then exit 5; fi
+if ! test -d hanamade/log"$(realpath -- source)"; then exit 4; fi
+if   test -d hanamade/log"$(realpath -- source/subdirectory)"; then exit 5; fi

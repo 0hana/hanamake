@@ -43,7 +43,9 @@ link_sources()
     do  # the following
 
       mkdir -p "hanamade/source-link$(dirname "$(realpath -- "${1}")")"
-      ln -s "$(realpath -- "${1}")" "hanamade/source-link$(realpath -- "${1}")"
+      ln -s \
+        "$(realpath -- "${1}")" \
+        "hanamade/source-link$(realpath -- "${1}")"
 
       shift 1
 
@@ -51,14 +53,10 @@ link_sources()
 
   else  # no directories were specified, default to 'source'
 
-    mkdir hanamade/source-link  # Make source-link directory
-
-    ln -s ../../source hanamade/source-link/source
-
-    # From within source-link,
-    # go back to hanamade,
-    # then to ../hanamade,
-    # and link to source
+    mkdir -p "hanamade/source-link$(dirname "$(realpath -- 'source')")"
+    ln -s \
+      "$(realpath -- 'source')" \
+      "hanamade/source-link$(realpath -- 'source')"
 
   fi
 )
@@ -67,4 +65,5 @@ link_sources()
 
 #  Link together all user specified <source-directories>
 #  (Or the default 'source' if none were specified)
+
 link_sources "${@}"

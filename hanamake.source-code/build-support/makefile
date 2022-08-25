@@ -78,9 +78,9 @@ $(shell rm -r previous_build \
 # Negate make target assumptions
 
 .SUFFIXES:
-CFLAGS     := -x c   -g -Wall -Wextra -Wpedantic
-CPPFLAGS   := -x c++ -g -Wall -Wextra -Wpedantic
-LINK_FLAGS :=        -g -Wall -Wextra -Wpedantic
+CFLAGS     := -x c   -g -Wall -Wextra -Wpedantic -Og
+CPPFLAGS   := -x c++ -g -Wall -Wextra -Wpedantic -Og
+LINK_FLAGS :=        -g -Wall -Wextra -Wpedantic -Og
 
 
 # Special build variables
@@ -131,18 +131,15 @@ ASM_INCLUSIONS = \
 
 # General build instructions
 0hana-main: $(object_files) 0hana-main.c
-	@echo '+  Compiling  : hanamade/$(@)'
+	@echo '%  Compiling  : hanamade/$(@)'
 	@echo '---------------'
 	@gcc    $(LINK_FLAGS)  $(^) -o  $(@)
 
 
-source_to_build = $(shell realpath --relative-base=.. "$(<)") \
+source_to_build = $(shell realpath --relative-base=.. '$(<)') \
   -> hanamade/build/.../$(notdir $(@))
 
-build_to_build = \
-  hanamade/build/$(patsubst /%,%,$(shell \
-  realpath --relative-base=.. "$(dir $(<:build%=%))"))/$(notdir $(<)) \
-  -> .../$(notdir $(@))
+build_to_build = hanamade/$(<) -> .../$(notdir $(@))
 
 
 build/%.o: build/%.s
@@ -184,7 +181,7 @@ formulating_script := "$(hanamake_source_code)/build-support/formulating.sh"
 
 0hana-main.c: $(filter %.i %.ipp, $(target_files))
 	@echo '---------------'
-	@echo '- Formulating : hanamade/$(@)'
+	@echo '+ Formulating : hanamade/$(@)'
 	@sh    $(formulating_script)    $(@) \
 	"\
 	$$(for directory in $(^)\

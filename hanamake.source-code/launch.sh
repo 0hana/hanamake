@@ -98,8 +98,7 @@ make \
 
 #  Run the unit tester
 
-echo
-echo '-- EXECUTING --'
+printf '\n%s\n' '-- EXECUTING --'
 if 2>&1 valgrind \
   --tool=memcheck \
   --leak-check=full \
@@ -112,12 +111,13 @@ if 2>&1 valgrind \
 && rm 0hana-main.log \
 && rm -r log
 then status=0
-  echo
-  echo '~ Final Result... -- PASS -- No errors encountered.'
+  printf '\n%s\n%s\n' \
+         '% Final Result...' \
+         '-- PASS -- No errors encountered.'
 else status=128
-  echo \
-  | tee -a 0hana-main.log
-  echo '~ Final Result... -- FAIL -- See hanamade/0hana-main.log' \
+  printf '\n%s\n%s\n' \
+         '% Final Result...' \
+         '-- FAIL -- See hanamade/0hana-main.log' \
   | tee -a 0hana-main.log
   find log -name '*.log' -type f -exec sh -c \
   '

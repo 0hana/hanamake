@@ -22,8 +22,8 @@ mkdir source 1 2 3 4
 hanamake
 result=${?}
 
-if ! test -d hanamade/source-link/source \
-|| ! test -L hanamade/source-link/source \
+if ! test -d hanamade/source-link"$(realpath -- source)" \
+|| ! test -L hanamade/source-link"$(realpath -- source)" \
 || ! test $(find hanamade/source-link -type l | wc -l) -eq 1
 then exit 1
 fi
@@ -34,6 +34,7 @@ result=${?}
 1>&2 tree hanamade/source-link
 
 if ! test -d hanamade/source-link"$(realpath -- source)" \
+|| ! test -L hanamade/source-link"$(realpath -- source)" \
 || ! test $(find hanamade/source-link -type l | wc -l) -eq 1
 then exit 1
 fi
