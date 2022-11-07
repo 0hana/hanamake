@@ -42,7 +42,8 @@ object_files := \
 
 target_files := \
   $(foreach base, $(basename $(filter %.o,   $(object_files))), $(base).d   $(base).i   $(base).o   $(base).s) \
-  $(foreach base, $(basename $(filter %.opp, $(object_files))), $(base).dpp $(base).ipp $(base).opp $(base).spp)
+  $(foreach base, $(basename $(filter %.opp, $(object_files))), $(base).dpp $(base).ipp $(base).opp $(base).spp \
+                                                                            $(base).xpp $(base).ypp $(base).zpp)
 
 
 .PRECIOUS: $(if $(source_files), $(target_files), $(error missing source (.c or .cpp) files))
@@ -67,7 +68,7 @@ $(foreach target, \
 
 $(shell rm -r previous_build \
   $(if \
-    $(shell find previous_build \( -name '*.[dios]' -o -name '*.[dios]pp' \)), \
+    $(shell find previous_build \( -name '*.[dios]' -o -name '*.[diosxyz]pp' \)), \
     $(info Removing 0hana-main.c to ensure consistency with removed or renamed source files) \
     $(info ) \
     && rm -f 0hana-main.c \
@@ -78,9 +79,10 @@ $(shell rm -r previous_build \
 # Negate make target assumptions
 
 .SUFFIXES:
-CFLAGS     := -x c   -g -Wall -Wextra -Wpedantic -Og
-CPPFLAGS   := -x c++ -g -Wall -Wextra -Wpedantic -Og
-LINK_FLAGS :=        -g -Wall -Wextra -Wpedantic -Og
+COMMON     := -g -Wall -Wextra -Wpedantic -Og
+CFLAGS     := -x c              $(COMMON)
+CPPFLAGS   := -x c++-cpp-output $(COMMON)
+LINK_FLAGS :=                   $(COMMON)
 
 
 # Special build variables
@@ -111,24 +113,6 @@ hanamade_assert_definition := \
   )
 
 
-# The first  gcc checks to see if the user is missing #include <stdio.h>
-# The second gcc includes <stdio.h> and defines the hanamake macros in .c(pp)
-
-ASM_INCLUSIONS = \
-  -Wno-unused-value \
-  -D'hanamake_test(function_name)= \
-     void function_name\#\#__hanamade_test__(void)' \
-  \
-  -D'hanamake_assert(expression, ...)=(0)'; \
-  \
-  $(if $(filter %.s, $(@)), gcc $(CFLAGS), g++ $(CPPFLAGS)) $(<) -o $(@) -S \
-  -include /usr/include/stdio.h \
-  -D'hanamake_test(function_name)= \
-     void function_name\#\#__hanamade_test__($(hanamade_test_parameters))' \
-  \
-  -D'hanamake_assert(expression, ...)=($(hanamade_assert_definition))'
-
-
 # General build instructions
 0hana-main: $(object_files) 0hana-main.c
 	@echo '%  Compiling  : hanamade/$(@)'
@@ -147,9 +131,19 @@ build/%.o: build/%.s
 	@gcc   -x assembler    $(<) -o $(@) -c
 
 
+# The first  gcc checks to see if the user is missing #include <stdio.h>
+# The second gcc includes <stdio.h> and defines the hanamake macros in .c
+
 build/%.s: source-link/%.c build/%.d
 	@echo '- Translating : $(source_to_build)'
-	@gcc      $(CFLAGS)    $(<) -o $(@) -S $(ASM_INCLUSIONS)
+	@gcc      $(CFLAGS)    $(<) -o $(@) -S \
+	  -Wno-unused-value \
+	  -D'hanamake_test(function_name)=void function_name##__hanamade_test__(void)' \
+	  -D'hanamake_assert(expression, ...)=(0)' \
+	;gcc      $(CFLAGS)    $(<) -o $(@) -S \
+	  -include /usr/include/stdio.h \
+	  -D'hanamake_test(function_name)=void function_name##__hanamade_test__($(hanamade_test_parameters))' \
+	  -D'hanamake_assert(expression, ...)=($(hanamade_assert_definition))'
 
 
 build/%.d: source-link/%.c
@@ -164,9 +158,67 @@ build/%.opp: build/%.spp
 	@g++   -x assembler    $(<) -o $(@) -c
 
 
-build/%.spp: source-link/%.cpp build/%.dpp
-	@echo '- Translating : $(source_to_build)'
-	@g++     $(CPPFLAGS)   $(<) -o $(@) -S $(ASM_INCLUSIONS)
+build/%.spp: build/%.xpp
+	@echo '- Translating : $(build_to_build)'
+	@g++     $(CPPFLAGS)   $(<) -o $(@) -S
+
+
+build/%.xpp: source-link/%.cpp mangled-name
+	@echo '- Realizing X : $(source_to_build)'
+	@ : \
+	; SURROGATE="$$(mktemp)" \
+	; trap 'rm $${SURROGATE}' EXIT \
+	; cpp -include /usr/include/stdio.h \
+	  -D'hanamake_test(function_signature)=extern "C" void @function_signature@__hanamade_test__@($(hanamade_test_parameters))' \
+	  -D'hanamake_assert(expression, ...)=($(hanamade_assert_definition))' \
+	  $(<) \
+	| tee $(@) > "$${SURROGATE}" \
+	; grep -o '@[$$A-Z_a-z][][ $$&()*,.0-9:A-Z_a-z]*@__hanamade_test__@' "$${SURROGATE}" \
+	| while read -r signature \
+	; do : \
+	  ; signature="$${signature#@}" \
+	  ; signature="$${signature%@__hanamade_test__@}" \
+	  ; sed -i "s/@$${signature}@__hanamade_test__@/$$(cat mangled-name/"$${signature}")__hanamade_test__/g" $(@) \
+	; done
+
+
+build/%.ypp: build/%.zpp
+	@echo '- Realizing Y : $(build_to_build)'
+	@g++     $(CPPFLAGS)   $(<) -o $(@) -S -Wno-unused-value
+
+
+build/%.zpp: source-link/%.cpp build/%.dpp
+	@echo '- Realizing Z : $(source_to_build)'
+	@ : \
+	; SURROGATE="$$(mktemp)" \
+	; trap 'rm $${SURROGATE}' EXIT \
+	; cpp \
+	  -D'hanamake_test(function_signature)=extern "C" void @function_signature@__hanamade_test__@(void)' \
+	  -D'hanamake_assert(expression, ...)=(0)' \
+	  $(<) \
+	| tee $(@) > "$${SURROGATE}" \
+	; grep -o '@[$$A-Z_a-z][][ $$&()*,.0-9:A-Z_a-z]*@__hanamade_test__@' "$${SURROGATE}" \
+	| while read -r signature \
+	; do : \
+	  ; signature="$${signature#@}" \
+	  ; signature="$${signature%@__hanamade_test__@}" \
+	  ; sed -i "s/@$${signature}@__hanamade_test__@/__hex_hash__$$(printf "$${signature}" | xxd -p)__hanamade_test__/g" $(@) \
+	; done
+
+
+mangled-name: $(filter %.ypp, $(target_files))
+	@echo '- Writing Map : %.ypp -> mangled-name'
+	@rm -rf $(@)
+	@mkdir  $(@)
+	@for file in $(^) \
+	; do : \
+	  ; grep '^_' $${file} \
+	  | sed 's/:$$//' \
+	  | while read -r mangled_name \
+	  ; do : \
+	    ; > $(@)/"$$(c++filt $${mangled_name})" printf "$${mangled_name}" \
+	  ; done \
+	; done
 
 
 build/%.dpp: source-link/%.cpp
