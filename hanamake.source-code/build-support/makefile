@@ -41,9 +41,9 @@ object_files := \
 
 
 target_files := \
-  $(foreach base, $(basename $(filter %.o,   $(object_files))), $(base).d   $(base).i   $(base).o   $(base).s) \
-  $(foreach base, $(basename $(filter %.opp, $(object_files))), $(base).dpp $(base).ipp $(base).opp $(base).spp \
-                                                                            $(base).xpp $(base).ypp $(base).zpp)
+  $(foreach base, $(basename $(filter %.o,   $(object_files))), $(base).d   $(base).i   $(base).o   $(base).s   $(base).y) \
+  $(foreach base, $(basename $(filter %.opp, $(object_files))), $(base).dpp $(base).ipp $(base).opp $(base).spp $(base).ypp\
+                                                                                                    $(base).xpp $(base).zpp)
 
 
 .PRECIOUS: $(if $(source_files), $(target_files), $(error missing source (.c or .cpp) files))
@@ -68,7 +68,7 @@ $(foreach target, \
 
 $(shell rm -r previous_build \
   $(if \
-    $(shell find previous_build \( -name '*.[dios]' -o -name '*.[diosxyz]pp' \)), \
+    $(shell find previous_build \( -name '*.[diosy]' -o -name '*.[diosxyz]pp' \)), \
     $(info Removing 0hana-main.c to ensure consistency with removed or renamed source files) \
     $(info ) \
     && rm -f 0hana-main.c \
@@ -134,16 +134,100 @@ build/%.o: build/%.s
 # The first  gcc checks to see if the user is missing #include <stdio.h>
 # The second gcc includes <stdio.h> and defines the hanamake macros in .c
 
-build/%.s: source-link/%.c build/%.d
+build/%.s: source-link/%.c normal-name
 	@echo '- Translating : $(source_to_build)'
+	@rm -f $(@:.s=.c.error)
+	@cpp -include /usr/include/stdio.h \
+	  -D'hanamake_test(function_signature)=extern "C" void @function_signature@__hanamade_test__@($(hanamade_test_parameters))' \
+	  -D'hanamake_assert(expression, ...)=($(hanamade_assert_definition))' \
+	  $(<) \
+	| grep -o '@[$$A-Z_a-z][][ $$&()*,.0-9:A-Z_a-z]*@__hanamade_test__@' \
+	| while read -r signature \
+	; do : \
+	  ; signature="$${signature#@}" \
+	  ; signature="$${signature%@__hanamade_test__@}" \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	  ; if ! test -f normal-name/"$${signature}"\
+	  ; then : \
+	    ; >>$(@:.s=.c.error) echo "-------------------------------------------------------------------------------" \
+	    ; >>$(@:.s=.c.error) echo "! BUILD ERROR : hanamake_test C function target" \
+	    ; >>$(@:.s=.c.error) echo \
+	    ; >>$(@:.s=.c.error) echo "                  $${signature}" \
+	    ; >>$(@:.s=.c.error) echo \
+	    ; >>$(@:.s=.c.error) echo "                IS UNDEFINED" \
+	    ; >>$(@:.s=.c.error) echo \
+	    ; >>$(@:.s=.c.error) echo "                Source of error:" \
+	    ; >>$(@:.s=.c.error) echo \
+	    ; >>$(@:.s=.c.error) echo "                  '$$(realpath --relative-base=.. '$(<)')'"\
+	    ; >>$(@:.s=.c.error) echo \
+	    ; exit 1 \
+	  ; fi \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	; done
 	@gcc      $(CFLAGS)    $(<) -o $(@) -S \
-	  -Wno-unused-value \
-	  -D'hanamake_test(function_name)=void function_name##__hanamade_test__(void)' \
-	  -D'hanamake_assert(expression, ...)=(0)' \
-	;gcc      $(CFLAGS)    $(<) -o $(@) -S \
 	  -include /usr/include/stdio.h \
 	  -D'hanamake_test(function_name)=void function_name##__hanamade_test__($(hanamade_test_parameters))' \
 	  -D'hanamake_assert(expression, ...)=($(hanamade_assert_definition))'
+
+build/%.y: source-link/%.c build/%.d
+	@echo '-  Yip! Yip!  : $(source_to_build)'
+	@rm -f $(@:.y=.c.error)
+	@cpp \
+	  -D'hanamake_test(function_signature)=extern "C" void @function_signature@__hanamade_test__@(void)' \
+	  -D'hanamake_assert(expression, ...)=(0)' \
+	  $(<) \
+	| grep -o '@[$$A-Z_a-z][][ $$&()*,.0-9:A-Z_a-z]*@__hanamade_test__@' \
+	| while read -r signature \
+	; do : \
+	  ; signature="$${signature#@}" \
+	  ; signature="$${signature%@__hanamade_test__@}" \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	  ; parameters="($${signature#*(}" \
+	  ; namespaces="$${signature%$${parameters}}" \
+	  ; namespaces="$${namespaces%::*}" \
+	  ; if test "$${signature}" != "$${namespaces}" \
+	  ; then : \
+	    ; >>$(@:.y=.c.error) echo "-------------------------------------------------------------------------------" \
+	    ; >>$(@:.y=.c.error) echo "! BUILD ERROR : hanamake_test C function target" \
+	    ; >>$(@:.y=.c.error) echo \
+	    ; >>$(@:.y=.c.error) echo "                  $${signature}" \
+	    ; >>$(@:.y=.c.error) echo \
+	    ; >>$(@:.y=.c.error) echo "                CANNOT have a" \
+	    ; >>$(@:.y=.c.error) echo \
+	    ; >>$(@:.y=.c.error) echo "                - parenthesized parameter type list '(type, ...)'" \
+	  	; >>$(@:.y=.c.error) echo "                - double-colon '::' delimited namespace" \
+	    ; >>$(@:.y=.c.error) echo \
+	    ; >>$(@:.y=.c.error) echo "                Source of error:" \
+	    ; >>$(@:.y=.c.error) echo \
+	    ; >>$(@:.y=.c.error) echo "                  '$$(realpath --relative-base=.. '$(<)')'"\
+	    ; >>$(@:.y=.c.error) echo \
+	  ; exit 1 \
+	  ; fi \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	; done
+	@gcc      $(CFLAGS)    $(<) -o $(@) -S \
+	  -Wno-unused-value \
+	  -D'hanamake_test(function_name)=void function_name##__hanamade_test__(void)' \
+	  -D'hanamake_assert(expression, ...)=(0)'
+
+
+normal-name: mangled-name $(filter %.y, $(target_files))
+	@echo "- Writing Map : %.y -> $(@)"
+	@rm -rf $(@)
+	@mkdir  $(@)
+	@for file in $(filter-out mangled-name, $(^)) \
+	; do : \
+	  ; grep '^[$$A-Z_a-z][$$0-9A-Z_a-z]*:$$' $${file} \
+	  | sed 's/:$$//' \
+	  | while read -r normal_name; do touch $(@)/"$${normal_name}"; done \
+	; done
+	@ls -1A mangled-name \
+	| grep -vx '__hex_hash__[0-9A-Fa-f][0-9A-Fa-f]*__hanamade_test__' \
+	| grep -x '[$$A-Z_a-z][$$0-9A-Z_a-z]*' \
+	| while read -r normal_name \
+	; do : \
+	  ; touch $(@)/"$${normal_name}" \
+	; done
 
 
 build/%.d: source-link/%.c
@@ -165,9 +249,9 @@ build/%.spp: build/%.xpp
 
 build/%.xpp: source-link/%.cpp mangled-name
 	@echo '- Realizing X : $(source_to_build)'
-	@ : \
+	@ rm -f $(@:.xpp=.cpp.error) \
 	; SURROGATE="$$(mktemp)" \
-	; trap 'rm $${SURROGATE}' EXIT \
+	; trap 'rm "$${SURROGATE}"' EXIT \
 	; cpp -include /usr/include/stdio.h \
 	  -D'hanamake_test(function_signature)=extern "C" void @function_signature@__hanamade_test__@($(hanamade_test_parameters))' \
 	  -D'hanamake_assert(expression, ...)=($(hanamade_assert_definition))' \
@@ -178,7 +262,25 @@ build/%.xpp: source-link/%.cpp mangled-name
 	; do : \
 	  ; signature="$${signature#@}" \
 	  ; signature="$${signature%@__hanamade_test__@}" \
-	  ; sed -i "s/@$${signature}@__hanamade_test__@/$$(cat mangled-name/"$${signature}")__hanamade_test__/g" $(@) \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	  ; if ! test -f mangled-name/"$${signature}" \
+	  ; then : \
+	    ; >>$(@:.xpp=.cpp.error) echo "-------------------------------------------------------------------------------" \
+	    ; >>$(@:.xpp=.cpp.error) echo "! BUILD ERROR : hanamake_test C++ function target" \
+	    ; >>$(@:.xpp=.cpp.error) echo \
+	    ; >>$(@:.xpp=.cpp.error) echo "                  $${signature}" \
+	    ; >>$(@:.xpp=.cpp.error) echo \
+	    ; >>$(@:.xpp=.cpp.error) echo "                IS UNDEFINED" \
+	    ; >>$(@:.xpp=.cpp.error) echo \
+	    ; >>$(@:.xpp=.cpp.error) echo "                Source of error:" \
+	    ; >>$(@:.xpp=.cpp.error) echo \
+	    ; >>$(@:.xpp=.cpp.error) echo "                  '$$(realpath --relative-base=.. '$(<)')'"\
+	    ; >>$(@:.xpp=.cpp.error) echo \
+	    ; rm "$(@)" \
+	    ; exit 1 \
+	  ; fi \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	  ; sed -i "s/@$${signature}@__hanamade_test__@/$$(2>/dev/null cat mangled-name/"$${signature}")__hanamade_test__/g" $(@) \
 	; done
 
 
@@ -189,9 +291,9 @@ build/%.ypp: build/%.zpp
 
 build/%.zpp: source-link/%.cpp build/%.dpp
 	@echo '- Realizing Z : $(source_to_build)'
-	@ : \
-	; SURROGATE="$$(mktemp)" \
-	; trap 'rm $${SURROGATE}' EXIT \
+	@ rm -f $(@:.zpp=.cpp.error)
+	@ SURROGATE="$$(mktemp)" \
+	; trap 'rm "$${SURROGATE}"' EXIT \
 	; cpp \
 	  -D'hanamake_test(function_signature)=extern "C" void @function_signature@__hanamade_test__@(void)' \
 	  -D'hanamake_assert(expression, ...)=(0)' \
@@ -202,6 +304,27 @@ build/%.zpp: source-link/%.cpp build/%.dpp
 	; do : \
 	  ; signature="$${signature#@}" \
 	  ; signature="$${signature%@__hanamade_test__@}" \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	  ; parameters="($${signature#*(}" \
+	  ; if test "$${signature%$${parameters}}" = "$${signature}" \
+	  ; then : \
+	    ; >>$(@:.zpp=.cpp.error) echo "-------------------------------------------------------------------------------" \
+	    ; >>$(@:.zpp=.cpp.error) echo "! BUILD ERROR : hanamake_test C++ function target" \
+	    ; >>$(@:.zpp=.cpp.error) echo \
+	    ; >>$(@:.zpp=.cpp.error) echo "                  $${signature}" \
+	    ; >>$(@:.zpp=.cpp.error) echo \
+	    ; >>$(@:.zpp=.cpp.error) echo "                REQUIRES a" \
+	    ; >>$(@:.zpp=.cpp.error) echo \
+	    ; >>$(@:.zpp=.cpp.error) echo "                - parenthesized parameter type list '(type, ...)'"\
+	    ; >>$(@:.zpp=.cpp.error) echo \
+	    ; >>$(@:.zpp=.cpp.error) echo "                Source of error:" \
+	    ; >>$(@:.zpp=.cpp.error) echo \
+	    ; >>$(@:.zpp=.cpp.error) echo "                  '$$(realpath --relative-base=.. '$(<)')'"\
+	    ; >>$(@:.zpp=.cpp.error) echo \
+	    ; rm "$(@)" \
+	    ; exit 1 \
+	  ; fi \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
 	  ; sed -i "s/@$${signature}@__hanamade_test__@/__hex_hash__$$(printf "$${signature}" | xxd -p)__hanamade_test__/g" $(@) \
 	; done
 
@@ -212,7 +335,7 @@ mangled-name: $(filter %.ypp, $(target_files))
 	@mkdir  $(@)
 	@for file in $(^) \
 	; do : \
-	  ; grep '^_' $${file} \
+	  ; grep '^[$$A-Z_a-z][$$0-9A-Z_a-z]*:$$' $${file} \
 	  | sed 's/:$$//' \
 	  | while read -r mangled_name \
 	  ; do : \
@@ -231,21 +354,10 @@ build/%.dpp: source-link/%.cpp
 formulating_script := "$(hanamake_source_code)/build-support/formulating.sh"
 
 
-0hana-main.c: $(filter %.i %.ipp, $(target_files))
+0hana-main.c: $(filter %i %.ipp, $(target_files))
 	@echo '---------------'
 	@echo '+ Formulating : hanamade/$(@)'
-	@sh    $(formulating_script)    $(@) \
-	"\
-	$$(for directory in $(^)\
-	  ; do :\
-	    ; for file in $$(ls -1A $${directory} | grep -v '.log$$')\
-	    ; do echo "$${file}/$${directory}/$${file}"\
-	    ; done\
-	  ; done\
-	  | LC_COLLATE=C sort -k1 -t/\
-	  | sed 's/^[(),0-9:A-Z_a-z][(),0-9:A-Z_a-z]*\///'\
-	  )\
-	"
+	@sh    $(formulating_script)    $(@)
 
 
 # Until a robust and reliable method is made to identify meaningful

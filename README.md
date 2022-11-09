@@ -89,6 +89,10 @@ I hope this helps you on your journey.
 
 Any file or directory above or below a `<source-directory>` must not have tabs, spaces, or newlines in its name. Despite my best efforts to allow them (see [launch.sh](hanamake.source-code/launch.sh) and [launch-support](hanamake.source-code/launch-support)), the [build-support](hanamake.source-code/build-support) code (and [GNU makefile](hanamake.source-code/build-support/makefile) in particular) relies heavily on their absence.
 
+Functions invoked via a function pointer variable are not detected.
+
+Global variable mutation effects are not accounted for.
+
 Tests for C (including `extern "C"`) and C++ functions must only appear in files with their respective extentions  
 
 - `.c` for C and `extern "C"`

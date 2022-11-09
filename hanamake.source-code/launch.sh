@@ -93,7 +93,22 @@ hanamake_source_code="$(command -v hanamake).source-code"
 
 make \
   -j -r hanamake_source_code="${hanamake_source_code}" \
-  -f "${hanamake_source_code}/build-support/makefile" || exit ${?}
+  -f "${hanamake_source_code}/build-support/makefile"  \
+|| \
+if test -n "$(find build -name '*.error')"
+then
+
+   find build -name '*.error' \
+  -exec sh -c \
+'printf "\n  Press Q to close this notification\n\n"'\
+'; while test ${#} -gt 0; do cat "${1}"; shift; done'\
+  "hanamake.source-code/launch.sh: build-errors find" '{}' '+' \
+ | less
+  printf '\n  BUILD ABORTED.\n\n'
+  exit 253
+else
+  exit 252
+fi
 
 
 #  Run the unit tester
@@ -106,6 +121,7 @@ if 2>&1 valgrind \
   -q -s ./0hana-main \
 | tee 0hana-main.log \
 \
+&& ! grep -q '^! UNCONNECTED :' 0hana-main.log \
 && ! grep -q '\[ FAILED \]'     0hana-main.log \
 &&   grep -q 'ERROR SUMMARY: 0' 0hana-main.log \
 && rm 0hana-main.log \
