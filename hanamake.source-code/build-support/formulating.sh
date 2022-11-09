@@ -709,63 +709,6 @@ int main(void)
   }
 
 
-  /* WARNING: AT THE CURRENT STAGE OF DEVELOPMENT,
-     THERE IS NO WAY TO DETECT INCONSISTENT TEST RESULTS.
-
-     IN THE ORIGINAL HANAMAKE PROTOTYPE (A YEAR BEFORE IT EVEN HAD ITS NAME),
-     EVERY USER FUNCTION WAS IMPLICITLY BOUND TO A TEST INCLUDED IN THE SAME
-     IMPLEMENTATION FILE, BEARING THE SAME NAME AS THE USER FUNCTION,
-     PREFIXED WITH 'test_'.
-
-     THIS RESTRICTION MADE CLEAR THE CONNECTION BETWEEN USER FUNCTION AND
-     UNIT TEST.
-
-     FURTHER, THE PROTOTYPE COULD ONLY BE USED WITH C CODE, NOT C++.
-
-     IN ORDER TO MAKE HANAMAKE A MORE FLEXIBLE, EASY TO ADOPT AND USE
-     UTILITY, THESE AND OTHER RESTRICTIONS WERE LIFTED.
-
-     HOWEVER, THIS BORE 2 IMPORTANT CONSEQUENCES
-
-     - AMBIGUITY AS TO WHAT A TEST IS ACTUALLY TESTING, AND
-     - C++ NAMESPACE (AND SUCH DEPTH) AMBIGUITY
-
-     THE CURRENT SCHEME TO DEFINE A TEST IN HANAMAKE IS VIA A MACRO:
-     'hanamake_test(your_test_name)', WHICH EVALUATES TO:
-     '__hanamade_test__your_test_name'.
-
-     EVEN IF THE 1ST CONSEQUENCE IS RESOLVED BY RESTRICTING TEST NAMES TO
-     FUNCTION SIGNATURES, AND CREATING A HANAMADE NAMESPACE
-
-       ( __hanamade_test__CPP_namespace::function(...)
-
-       would potentially require a new namespace for every C++ function at
-       minimum.
-
-       __hanamade_test__::CPP_namespace::function(...)
-
-       reduces the global namespace issue to only a single global namespace
-       )
-
-     THIS DOES NOT SOLVE THE ISSUE OF NAMESPACE DECLARATIONS
-
-       ( To define a member of a namespace, you must declare the namespace
-       as so:
-
-         namespace NS1 { member_name; }
-
-       namespace NS1 { CPP_namespace::function(...); }
-
-       is invalid--it must be declared as
-
-       namespace NS1 { namespace CPP_namespace { type function(...); } }
-
-       This is not viable in general with a macro alone--it fundamentally
-       requires ** some form of ** parsing the C++ source code in advance
-       to achieve via macro.
-       )
-  */
-
   if(consistent)
   {
     char const * const consistent_results_message =
