@@ -100,10 +100,15 @@ then
 
    find build -name '*.error' \
   -exec sh -c \
-'printf "\n  Press Q to close this notification\n\n"'\
-'; while test ${#} -gt 0; do cat "${1}"; shift; done'\
+  'while test ${#} -gt 0; do cat "${1}"; shift; done'\
   "hanamake.source-code/launch.sh: build-errors find" '{}' '+' \
+  > 0hana-main.log
+
+ ( printf "\n  Press Q to close this notification\n\n"
+   cat 0hana-main.log
+ ) \
  | less
+
   printf '\n  BUILD ABORTED.\n\n'
   exit 253
 else

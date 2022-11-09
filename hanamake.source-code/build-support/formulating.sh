@@ -102,6 +102,7 @@ do
 >>${1} echo "void ${target}__hanamade_test__"
 >>${1} echo "( FILE      ** const __hanamade_test__log_file"
 >>${1} echo ", char const * const __hanamade_test__log_path"
+>>${1} echo ", char const * const __hanamade_test__targetID"
 >>${1} echo ") ;"
 >>${1} echo
 done
@@ -168,6 +169,7 @@ struct code_object_info
   void        (* const __hanamade_test__)
   ( FILE      ** const __hanamade_test__log_file
   , char const * const __hanamade_test__log_path
+  , char const * const __hanamade_test__targetID
   ) ;
   size_t const         __hanamade_test__subject_index;
   /*------------------------------------------------*/
@@ -602,14 +604,17 @@ int main(void)
       coi[index].__hanamade_test__
       (   &(coi[index].log_file)
       , coi[coi[index].__hanamade_test__subject_index].log_path
+      , left_justified
+        (
+        coi[coi[index].__hanamade_test__subject_index].name
+        )
       );
 
       if(coi[index].log_file != NULL)
       {
         printf
-        ( \"\b\b\b%s  [ FAILED ] -- see hanamade/%s\n  ...\"
+        ( \"\b\b\b%s  [ FAILED ] -- see hanamade/log\n  ...\"
         , coi[coi[index].__hanamade_test__subject_index].name
-        , coi[coi[index].__hanamade_test__subject_index].log_path
         );
         coi[index].status = failed;
       }
@@ -767,7 +772,7 @@ int main(void)
     \"\n  CONSISTENT -- Your code test results are consistent with each other.\"
     \"\n\"
     \"\n                Specifically, no function whose test passed\"
-    \"\n                depends upon a function whose test failed.\n\"
+    \"\n                  depends upon a function whose test failed.\n\"
     ;
 
     /* DO NOT PRINT TO LOG. THE RESULTS ARE CONSISTENT. REMOVE THE LOG. */
@@ -782,7 +787,7 @@ int main(void)
     \"\n  INCONSISTENT -- Your code test results are NOT consistent with each other.\"
     \"\n\"
     \"\n                  Specifically, some functions whose tests passed\"
-    \"\n                  depend upon functions whose tests failed.\n\"
+    \"\n                         depend upon functions whose tests failed.\n\"
     ;
 
     fprintf

@@ -89,7 +89,8 @@ LINK_FLAGS :=                   $(COMMON)
 
 hanamade_test_parameters := \
   FILE      ** const __hanamade_test__log_file, \
-  char const * const __hanamade_test__log_path
+  char const * const __hanamade_test__log_path, \
+  char const * const __hanamade_test__targetID
 
 hanamade_assert_definition := \
   (expression) \
@@ -102,7 +103,15 @@ hanamade_assert_definition := \
       ( \
         (*__hanamade_test__log_file == NULL) && \
         (*__hanamade_test__log_file = fopen(__hanamade_test__log_path, "w")) && \
-        (fprintf(*__hanamade_test__log_file, __FILE__ "\nFailed assert(s):\n")) \
+        (fprintf \
+         ( *__hanamade_test__log_file, \
+           "-------------------------------------------------------------------------------\n" \
+           __FILE__ "\n"\
+           "Failed target id:  %s\n" \
+           "Failed assert(s):\n" \
+         , __hanamade_test__targetID \
+         ) \
+        ) \
       ) \
     ) \
     , fprintf(*__hanamade_test__log_file, "\nLine   \#  %i : (" \#expression ")\n", __LINE__) \
