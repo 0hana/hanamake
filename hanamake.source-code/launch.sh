@@ -89,18 +89,41 @@ cd hanamade
 
 #  Invoke the hanamake internal makefile
 
+trap \
+  '1>&2 printf "\n%s\n" "hanamake:  Exiting. (CODE ${?})"; rm -f build.log' \
+  EXIT INT
+
 hanamake_source_code="$(command -v hanamake).source-code"
 
-make \
-  -j -r hanamake_source_code="${hanamake_source_code}" \
-  -f "${hanamake_source_code}/build-support/makefile"  \
+exec 4>&1  # Thanks @mtraceur -- See <https://stackoverflow.com/a/30659751>
+MAKE_EXIT="\
+$(
+{
+  { \
+    2>&1 \
+    make \
+         -r hanamake_source_code="${hanamake_source_code}" \
+      -f "${hanamake_source_code}/build-support/makefile"  \
+    3>&- ; \
+    echo "${?}" 1>&3 ; \
+  } 4>&- \
+  | tee build.log 1>&4 ; \
+} 3>&1
+)\
+"
+exec 4>&-  # Close off fd4 connection to fd1
+
+
+# Display a notification if make failed
+
+test "${MAKE_EXIT}" -eq 0 \
 || \
-if test -n "$(find build -name '*.error')"
+if test -n "$(find build -name '*.error' -type f)"
 then
 
-   find build -name '*.error' \
+   find build -name '*.error' -type f \
   -exec sh -c \
-  'while test ${#} -gt 0; do cat "${1}"; shift; done'\
+  'while test ${#} -gt 0; do cat "${1}"; shift; done' \
   "hanamake.source-code/launch.sh: build-errors find" '{}' '+' \
   > 0hana-main.log
 
@@ -109,33 +132,58 @@ then
  ) \
  | less
 
-  printf '\n  BUILD ABORTED.\n\n'
+  printf '\n  BUILD ABORTED.\n' | tee -a build.log
+  >> build.log cat 0hana-main.log
+  mv build.log     0hana-main.log
+
   exit 253
+
 else
+
+  printf '\n  BUILD ABORTED.\n' | tee -a build.log
+  mv build.log     0hana-main.log
+
   exit 252
+
 fi
 
 
-#  Run the unit tester
+#  Run the unit tester and exit with final status code
+#    0 = All Clear
+#  128 = See 0hana-main.log
 
-printf '\n%s\n' '-- EXECUTING --'
+printf '%s\n' \
+       '---------------' \
+       > 0hana-main.log
+
+printf '%s\n%s\n%s\n' \
+       'BUILD SUCCEEDED' \
+       '---------------' \
+       '-- EXECUTING --' \
+| tee -a 0hana-main.log
+
 if 2>&1 valgrind \
   --tool=memcheck \
   --leak-check=full \
   --show-leak-kinds=all \
   -q -s ./0hana-main \
-| tee 0hana-main.log \
+| tee -a  0hana-main.log \
 \
 && ! grep -q '^! UNCONNECTED :' 0hana-main.log \
 && ! grep -q '\[ FAILED \]'     0hana-main.log \
 &&   grep -q 'ERROR SUMMARY: 0' 0hana-main.log \
 && rm 0hana-main.log \
 && rm -r log
-then status=0
+then
+
   printf '\n%s\n%s\n' \
          '% Final Result...' \
          '-- PASS -- No errors encountered.'
-else status=128
+
+  exit   0  # All Clear
+
+else
+
   printf '\n%s\n%s\n' \
          '% Final Result...' \
          '-- FAIL -- See hanamade/0hana-main.log' \
@@ -144,10 +192,8 @@ else status=128
   '
   >> 0hana-main.log cat "${@}"
   ' \
-  '_' '{}' '+'
+  'hanamake.source-code/launch.sh: 0hana-main.log concatenation' '{}' '+'
+
+  exit 128  # See 0hana-main.log
+
 fi
-
-
-#  Return exit status
-
-exit ${status}
