@@ -24,7 +24,7 @@ AGPL (See COPYING)
 		     | hanamake clean
 
 > **WARNING:** `hanamake` is currently in alpha development.  
-> Some features and functionality are incomplete.
+> Some features and functionality are incomplete.  
 >
 > The only way to reliably use `hanamake` testing during alpha-development is with `hanamake clean` between each `hanamake` invokation.  
 > Unfortunately, this prevents `hanamake debug` use.  
@@ -130,7 +130,12 @@ The 2 variations really are almost identical:
 
 This is needed to unambiguously tell the `hanamake` testing system which C or C++ function the test is for.
 
-> It's worth noting that `hanamake_assert( )` returns its evaluated boolean, so it can be used in other expressions and `if(statements)`.
+> It's worth noting that `hanamake_assert( )` returns its evaluated boolean, so it can be used in other expressions and `if(statements)`.  
+>
+> Also, array parameter types in C++ `hanamake_test( )` statements must be expressed with pointer syntax:  
+>
+>   An `int array[]` parameter is expressed as `int*`  
+>   Specifically, `function_name(int array[])` is marked for testing with `hanamake_test(function_name(int*))`  
 
 ### Examples
 
