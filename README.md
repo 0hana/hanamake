@@ -19,38 +19,49 @@ AGPL (See COPYING)
 
 	SYNOPSIS
 	
-		Usage: hanamake [ -s <source-directory> ... ]
-		     | hanamake debug [ <function-name> ... ]
-		     | hanamake clean
+	  Usage: hanamake [ -s <source-directory> ... ]
+	       | hanamake debug [ <function-name> ... ]
+	       | hanamake clean
 
 > **WARNING:** `hanamake` is currently in alpha development.  
-> Some features and functionality are incomplete.  
+> Some features and functionality are incomplete.
 >
 > The only way to reliably use `hanamake` testing during alpha-development is with `hanamake clean` between each `hanamake` invokation.  
-> Unfortunately, this prevents `hanamake debug` use.  
+> Unfortunately, this prevents `hanamake debug` use.
 
-In any `.c` or `.cpp` file below directories specified with the `-s` option (default: `source`),  
-`hanamake` will look for functions enclosed with: `hanamake_test( )`  
-and check the validity of corresponding assertions enclosed with `hanamake_assert( )`.
+In all `.c` and `.cpp` files below the directories specified with the `-s` option (default: `source`),  
+ `hanamake` will look for function names enclosed with: `hanamake_test( )` and check  
+the validity of corresponding assertions enclosed with: `hanamake_assert( )`.
 
 For example, in C:
 
-    hanamake_test(add)
-    {
-        // Test commutative property of addition
-        hanamake_assert(add(1, 2) == 3);
-        hanamake_assert(add(2, 1) == 3);
-    }
+	int add(int A, int B) { return A + B; }
+	
+	#ifdef hanamake_test
+	
+	hanamake_test(add)
+	{
+	    // Test commutative property of addition
+	    hanamake_assert(add(1, 2) == 3);
+	    hanamake_assert(add(2, 1) == 3);
+	}
+	
+	#endif
 
-`add` is a function that takes 2 `int` type inputs and returns 1 `int` output,  
-and the assertions tell `hanamake` to check that 1 + 2 = 3 = 2 + 1   
-(assuming `add` is straight-forward function name).
+The `add` function adds 2 numbers together,  
+and the test assertions tell `hanamake` to check that:
+
+- `add(1, 2) == 3`
+- `add(2, 1) == 3`
 
 If none of the assertions fail (none of the expressions evaluate as false),  
 then `hanamake` will notify you during the testing phase that the test for `add` passed.
 
 Otherwise, it will notify you that the test for `add` failed,  
-and record the locations of all failed assertions in a log file somewhere under `hanamade/log`.
+and record all failed assertions for `add` and their locations in a log file somewhere under `hanamade/log`.
+
+> **The important log file is `hanamade/0hana-main.log`**.  
+> It is the union of all failure logs with additional context.
 
 For tests that fail, you can initiate `debug` mode via `hanamake debug` to re-run the failed tests in `gdb` with the failed assertions marked, and move through the logic step by step to help isolate the cause.
 
@@ -69,7 +80,7 @@ The main (if not only) `gdb` commands you'll *need* to know are:
 The main reason behind `gdb` integration via `debug` mode is friction.  
 Running the tests, checking results, then working out where to start looking for bugs is a cumbersome loop.
 
-Since `hanamake` runs a minimum of tests partly by working out inter-function dependency,
+Since `hanamake` runs a minimum of tests partly by working out inter-function dependency,  
 `hanamake` can also tell you where failures with greater consequences are, and thus where you should consider looking first.
 
 And instead of making you look, since it already logged where the failures occured, it can just take you there and pause program execution just before failure via `gdb` breakpoints, potentially saving you hours if you had no idea where to start, and otherwise providing a systematic approach to eliminating run-time errors.
@@ -89,16 +100,17 @@ I hope this helps you on your journey.
 
 Any file or directory above or below a `<source-directory>` must not have tabs, spaces, or newlines in its name. Despite my best efforts to allow them (see [launch.sh](hanamake.source-code/launch.sh) and [launch-support](hanamake.source-code/launch-support)), the [build-support](hanamake.source-code/build-support) code (and [GNU makefile](hanamake.source-code/build-support/makefile) in particular) relies heavily on their absence.
 
-Functions invoked via a function pointer variable are not detected.
+Functions are only detected as dependencies when invoked directly (i.e. not through a function pointer variable).
 
-Global variable mutation effects are not accounted for.
+User defined global variable mutation effects are not accounted for by the testing system.
 
-Tests for C (including `extern "C"`) and C++ functions must only appear in files with their respective extentions  
-
+Tests for C (including `extern "C"`) and C++ functions must only appear in files with their respective extentions:
+  
 - `.c` for C and `extern "C"`
 - `.cpp` for C++
-
+  
 and must use a slight variation in syntax for each as follows:
+
 
 ### C
 
@@ -108,8 +120,9 @@ and must use a slight variation in syntax for each as follows:
 	
 	  hanamake_assert(boolean expression) ;
 	
-	  ... cleanup code (if needed) ...
+	  ... cleanup code ...
 	}
+
 
 ### C++
 
@@ -119,7 +132,7 @@ and must use a slight variation in syntax for each as follows:
 	
 	  hanamake_assert(boolean expression) ;
 	
-	  ... cleanup code (if needed) ...
+	  ... cleanup code ...
 	}
 
 
@@ -130,12 +143,26 @@ The 2 variations really are almost identical:
 
 This is needed to unambiguously tell the `hanamake` testing system which C or C++ function the test is for.
 
-> It's worth noting that `hanamake_assert( )` returns its evaluated boolean, so it can be used in other expressions and `if(statements)`.  
->
-> Also, array parameter types in C++ `hanamake_test( )` statements must be expressed with pointer syntax:  
->
->   An `int array[]` parameter is expressed as `int*`  
->   Specifically, `function_name(int array[])` is marked for testing with `hanamake_test(function_name(int*))`  
+> It's worth noting that `hanamake_assert( )` returns its evaluated boolean, so it can be used in other expressions and `if(statements)`.
+
+That said, there are 2 additional constraints on the syntax of C++ function signatures
+passed to `hanamake_test( )`:  
+
+- Array parameter types in C++ `hanamake_test( )` statements must be expressed with pointer syntax:  
+  An `int array[]` parameter is expressed as `int*`  
+  Specifically, `function_name(int array[])` is marked for testing with `hanamake_test(function_name(int*))`
+
+- Template type instantiation syntax `<type, ...>` cannot be used directly--  
+  instead, you should pass a wrapper function that calls an instantiated template function:
+
+	  template <typename T>
+	  void print_generic(T u) { cout << u << endl; }
+	  
+	  void print_specific(char C) { print_generic<char>(C); }
+	  
+	  hanamake_test(print_specific(char C)) { ... }
+
+---
 
 ### Examples
 
@@ -209,7 +236,7 @@ is `Cstring[ 6]` (Text between dialogue `"` `"` quotations implicitly ends with 
 *An improvement, relying on relatively low optimization capabilities from a compiler:*  
 *(meaning this is virtually guaranteed to work wherever you use it)*  
 
-    #define little_endian little_endian()
-    static inline uint8_t little_endian { return (*(int16_t const * const)" " == ' '; }
+	#define little_endian little_endian()
+	static inline uint8_t little_endian { return (*(int16_t const * const)" " == ' '; }
 
 ---

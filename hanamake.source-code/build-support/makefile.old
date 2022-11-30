@@ -1,0 +1,576 @@
+#  Copyright (C) 2022 Hanami Zero
+#
+#  This file is part of hanamake,
+#  a beginner-friendly unit testing framework utility for C and C++
+#
+#  hanamake is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License --
+#  the superset of version 3 of the GNU General Public License --
+#  as published by the Free Software Foundation.
+#
+#  hanamake is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty
+#  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
+
+.DELETE_ON_ERROR:
+
+
+# Identify target files
+
+source_files := \
+  $(shell \
+    find -P source-link -type l -exec sh -c \
+    ' : \
+    ; while test $${#} -gt 0 \
+    ; do : \
+      ; find -H "$${1}" \( -name '\''*.c'\'' -o -name '\''*.cpp'\'' \) -type f \
+      ; shift 1 \
+    ; done \
+    ' \
+    "makefile-find source_files" '{}' '+' \
+   )
+
+
+object_files := \
+  $(foreach source, $(filter %.c,   $(source_files)), $(source:source-link/%.c=build/%.o)) \
+  $(foreach source, $(filter %.cpp, $(source_files)), $(source:source-link/%.cpp=build/%.opp))
+
+
+target_files := \
+  $(foreach base, $(basename $(filter %.o,   $(object_files))), $(base).d   $(base).i   $(base).o   $(base).s   $(base).y) \
+  $(foreach base, $(basename $(filter %.opp, $(object_files))), $(base).dpp $(base).ipp $(base).opp $(base).spp $(base).ypp\
+                                                                                                    $(base).xpp $(base).zpp)
+
+
+.PRECIOUS: $(if $(source_files), $(target_files), $(error missing source (.c or .cpp) files))
+
+
+# Identify and Isolate target directories
+
+target_directories := $(sort $(dir $(object_files)))
+
+$(shell mkdir -p $(target_directories))
+$(shell mv build previous_build)
+$(shell mkdir -p $(target_directories))
+
+
+# Transfer existing target files to current build
+
+$(foreach target, \
+  $(target_files), \
+  $(shell test -e 'previous_$(target)' && mv 'previous_$(target)' '$(target)') \
+)
+#    the 'test -e' is for the *.i(pp) targets, which are actually directories
+#        'test -e' tests for (e)ither a directory or normal file
+
+$(shell rm -r previous_build \
+  $(if \
+    $(shell find previous_build \( -name '*.[diosy]' -o -name '*.[diosxyz]pp' \)), \
+    $(info Removing 0hana-main.c to ensure consistency with removed or renamed source files) \
+    $(info ) \
+    && rm -f 0hana-main.c \
+  ) \
+)
+
+
+# Delete all previous-names (mangled and normal) related to deleted .ypp and .y files
+# and make mangled-name and normal-name directories
+
+target_names := $(target_directories:build/%=previous-names/%)
+
+target_directories  = $(error 'target_directories' is only defined in the makefile preamble)
+
+$(shell mkdir -p $(target_names))
+$(shell mv previous-names non-target-previous-names)
+$(shell mkdir -p $(target_names) mangled-name normal-name)
+
+target_names        = $(error       'target_names' is only defined in the makefile preamble)
+
+$(foreach target, \
+  $(filter %.y %.ypp,$(target_files:build/%=previous-names/%)), \
+  $(shell test -f 'non-target-$(target)' && mv 'non-target-$(target)' '$(target)') \
+)
+
+DELETE_UPDATED_NAMES = \
+	while read -r name \
+	; do : \
+	  ; if test "$$(dirname "$${name}")" = "mangled-name" \
+	    || test "$$(dirname "$${name}")" =  "normal-name" \
+	  ; then rm "$${name}" \
+	    || printf "\n\n  %s\n  %s\n\n" "ERROR: duplicate definition of '$${name}'" \
+	  ; fi \
+	; done
+
+$(shell find non-target-previous-names -type f \
+  \( -name '*.y' \
+  -o -name '*.ypp' \
+  \) -exec sh -c \
+  ' : \
+  ; while test $${#} -gt 0 \
+  ; do \
+    ; cat "$${1}" | $(DELETE_UPDATED_NAMES) \
+    ; shift 1 \
+  ; done \
+  ' \
+  'makefile preamble: non-target-previous-names removal' '{}' '+' \
+)
+
+
+$(shell rm -r non-target-previous-names)
+
+
+# Note the test "$$(dirname $${name}")" tests are a protective measure to prevent arbitrary file deletion
+# Theoretically, this should never be an issue, but if one were to deliberately create or alter the .y or
+# .ypp book-keeping files under the hanamade/previous-names directory that hanamake uses to keep track of
+# what needs to be done, a lack of such protection could direct hanamake to delete any arbitrary files on
+# the system.
+#
+# By testing that the file specified to be deleted is in one of the function-name sub-directories of
+# hanamade ('hanamade/mangled-name' or 'hanamade/normal-name'), any potential damage caused by tampering
+# is contained to those book-keeping directories, and all issues can be resolved via the 'hanamake clean'
+# command, followed by the main hanamake command, 'hanamake [ -s <source-directory> ... ]', which should
+# take only minutes to complete even for very large projects of hundreds of code files tens of thousands
+# of kilo-bytes (e.g. 64K) each, on a modern computer c.2020 with multi-core parallel processing ability
+
+
+# Negate make target assumptions
+
+.SUFFIXES:
+
+COMMON     := -g -Wall -Wextra -Wpedantic -Og
+CFLAGS     := -x c              $(COMMON)
+CPPFLAGS   := -x c++-cpp-output $(COMMON)
+LINK_FLAGS :=                   $(COMMON)
+
+
+# 2nd Stage of .d(pp) dependency file generation
+
+
+
+# Special build variables
+
+hanamade_test_parameters := \
+  FILE      ** const __hanamade_test__log_file, \
+  char const * const __hanamade_test__log_path, \
+  char const * const __hanamade_test__targetID
+
+hanamade_assert_definition := \
+  (expression) \
+  ? \
+  ( ((void)((*__hanamade_test__log_file == NULL) && remove(__hanamade_test__log_path))), 1 ) \
+  : \
+  ( \
+    ( \
+      (void) \
+      ( \
+        (*__hanamade_test__log_file == NULL) && \
+        (*__hanamade_test__log_file = fopen(__hanamade_test__log_path, "w")) && \
+        (fprintf \
+         ( *__hanamade_test__log_file, \
+           "-------------------------------------------------------------------------------\n" \
+           __FILE__ "\n"\
+           "Failed target id:  %s\n" \
+           "Failed assert(s):\n" \
+         , __hanamade_test__targetID \
+         ) \
+        ) \
+      ) \
+    ) \
+    , fprintf(*__hanamade_test__log_file, "\nLine   \#  %i : (" \#expression ")\n", __LINE__) \
+    __VA_OPT__(, \
+      fprintf(*__hanamade_test__log_file, "Context:  " __VA_ARGS__), fprintf(*__hanamade_test__log_file, "\n") \
+    ) \
+    , 0 \
+  )
+
+
+#############################
+#
+# General Build Instructions:
+#
+#############################
+
+
+##################
+###
+### Build Depth 0:
+###
+##################
+
+0hana-main: $(object_files) 0hana-main.c
+	@echo '%  Compiling  : hanamade/$(@)'
+	@echo '---------------'
+	@gcc    $(LINK_FLAGS)  $(^) -o  $(@)
+
+
+##################
+###
+### Build Depth 1:
+###
+##################
+
+build_to_build = hanamade/$(<) -> .../$(notdir $(@))
+
+
+build/%.o: build/%.s
+	@echo '- Mechanizing : $(build_to_build)'
+	@gcc   -x assembler    $(<) -o $(@) -c
+
+
+build/%.opp: build/%.spp
+	@echo '- Mechanizing : $(build_to_build)'
+	@g++   -x assembler    $(<) -o $(@) -c
+
+
+formulating_script := "$(hanamake_source_code)/build-support/formulating.sh"
+
+
+0hana-main.c: $(filter %i %.ipp, $(target_files))
+	@echo '---------------'
+	@echo '+ Formulating : hanamade/$(@)'
+	@sh    $(formulating_script)    $(@)
+
+
+##################
+###
+### Build Depth 2:
+###
+##################
+
+source_to_build = $(shell realpath --relative-base=.. '$(<)') \
+  -> hanamade/build/.../$(notdir $(@))
+
+
+build/%.s: source-link/%.c build/%.y  # MAY HAVE ADDITIONAL DEPENDENCIES based on build/%.d
+	@echo '- Translating : $(source_to_build)'
+	@rm -f $(@:.s=.c.error)
+	@cpp -include /usr/include/stdio.h \
+	  -D'hanamake_test(function_signature)=extern "C" void @function_signature@__hanamade_test__@($(hanamade_test_parameters))' \
+	  -D'hanamake_assert(expression, ...)=($(hanamade_assert_definition))' \
+	  $(<) \
+	| grep -o '@[$$A-Z_a-z][][ $$&()*,0-9:A-Z_a-z]*@__hanamade_test__@' \
+	| while read -r signature \
+	; do : \
+	  ; signature="$${signature#@}" \
+	  ; signature="$${signature%@__hanamade_test__@}" \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	  ; if ! test -f normal-name/"$${signature}"\
+	  ; then : \
+	    ; >>$(@:.s=.c.error) echo "-------------------------------------------------------------------------------" \
+	    ; >>$(@:.s=.c.error) echo "! BUILD ERROR : hanamake_test C function target" \
+	    ; >>$(@:.s=.c.error) echo \
+	    ; >>$(@:.s=.c.error) echo "                  $${signature}" \
+	    ; >>$(@:.s=.c.error) echo \
+	    ; >>$(@:.s=.c.error) echo "                IS UNDEFINED" \
+	    ; >>$(@:.s=.c.error) echo \
+	    ; >>$(@:.s=.c.error) echo "                Source of error:" \
+	    ; >>$(@:.s=.c.error) echo \
+	    ; >>$(@:.s=.c.error) echo "                  '$$(realpath --relative-base=.. '$(<)')'" \
+	    ; >>$(@:.s=.c.error) echo \
+	    ; exit 1 \
+	  ; fi \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	; done
+	@gcc      $(CFLAGS)    $(<) -o $(@) -S \
+	  -include /usr/include/stdio.h \
+	  -D'hanamake_test(function_name)=void function_name##__hanamade_test__($(hanamade_test_parameters))' \
+	  -D'hanamake_assert(expression, ...)=($(hanamade_assert_definition))'
+
+
+build/%.spp: build/%.xpp
+	@echo '- Translating : $(build_to_build)'
+	@g++     $(CPPFLAGS)   $(<) -o $(@) -S
+
+
+# Until a robust and reliable method is made to identify meaningful
+# object changes between assembly files, the "one-function one-file"
+# approach is only known way to generally achieve re-test minimization.
+#
+# In the meantime, remove and remake build/%.i(pp) directories per source update
+
+remove_and_remake_script = \
+  echo '- Subdividing : $(build_to_build)'; rm -rf $(@) && mkdir $(@)
+
+
+# Split build/%.s(pp) files into partial assembly files under build/%.i(pp)
+
+csplit_script = \
+  csplit --prefix='$(@)/csplit_' --suffix-format='%%_%i.x' --silent $(<) \
+  $$(echo \
+    $$(grep      '^[$$A-Z_a-z][$$0-9A-Z_a-z]*:$$' $(<) \
+      | sed  's/\(^[$$A-Z_a-z][$$0-9A-Z_a-z]*:$$\)/\/^\1$$\//' \
+      ) \
+    | sed 's/\/\(\^[$$A-Z_a-z][$$0-9A-Z_a-z]*:\$$\)\//%\1%/' \
+    ) \
+  ; for csplit_file in $(@)/csplit_*.x \
+  ; do function_name="$$(head -n 1 $${csplit_file} | sed 's/://')" \
+  \
+    ; mv $${csplit_file} $(@)/$${function_name} \
+    ; if grep -q     "$${function_name}, @function" \
+    $(basename $(@))$(if $(filter %.i, $(@)),.s,.spp) \
+    ; then mkdir -p $(@:build/%=log/%) \
+      &&   touch    $(@:build/%=log/%)/$${function_name}.log \
+    ; else rm       $(@)/$${function_name} \
+    ; fi \
+  \
+  ; done
+
+
+build/%.i: build/%.s
+	@$(remove_and_remake_script)
+	@$(csplit_script)
+
+
+build/%.ipp: build/%.spp
+	@$(remove_and_remake_script)
+	@$(csplit_script)
+
+
+##################
+###
+### Build Depth 3:
+###
+##################
+
+build/%.y: source-link/%.c build/%.d
+	@echo '- Appa YipYip : $(source_to_build)'
+	@rm -f $(@:.y=.c.error)
+	@2>/dev/null cat $(@:build/%=previous-names/%) | $(DELETE_UPDATED_NAMES)
+	@cpp \
+	  -D'hanamake_test(function_signature)=extern "C" void @function_signature@__hanamade_test__@(void)' \
+	  -D'hanamake_assert(expression, ...)=(0)' \
+	  $(<) \
+	| grep -o '@[$$A-Z_a-z][][ $$&()*,0-9:A-Z_a-z]*@__hanamade_test__@' \
+	| while read -r signature \
+	; do : \
+	  ; signature="$${signature#@}" \
+	  ; signature="$${signature%@__hanamade_test__@}" \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	  ; parameters="($${signature#*(}" \
+	  ; namespaces="$${signature%$${parameters}}" \
+	  ; namespaces="$${namespaces%::*}" \
+	  ; if test "$${signature}" != "$${namespaces}" \
+	  ; then : \
+	    ; >>$(@:.y=.c.error) echo "-------------------------------------------------------------------------------" \
+	    ; >>$(@:.y=.c.error) echo "! BUILD ERROR : hanamake_test C function target" \
+	    ; >>$(@:.y=.c.error) echo \
+	    ; >>$(@:.y=.c.error) echo "                  $${signature}" \
+	    ; >>$(@:.y=.c.error) echo \
+	    ; >>$(@:.y=.c.error) echo "                CANNOT have a" \
+	    ; >>$(@:.y=.c.error) echo \
+	    ; >>$(@:.y=.c.error) echo "                - parenthesized parameter type list '(type, ...)'" \
+	    ; >>$(@:.y=.c.error) echo "                - double-colon '::' delimited namespace" \
+	    ; >>$(@:.y=.c.error) echo \
+	    ; >>$(@:.y=.c.error) echo "                Source of error:" \
+	    ; >>$(@:.y=.c.error) echo \
+	    ; >>$(@:.y=.c.error) echo "                  '$$(realpath --relative-base=.. '$(<)')'" \
+	    ; >>$(@:.y=.c.error) echo \
+	    ; exit 1 \
+	  ; fi \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	; done
+	@gcc      $(CFLAGS)    $(<) -o $(@) -S \
+	  -Wno-unused-parameter \
+	  -Wno-unused-value \
+	  -Wno-unused-variable \
+	  -D'hanamake_test(function_name)=void function_name##__hanamade_test__(void)' \
+	  -D'hanamake_assert(expression, ...)=(0)'
+	@grep -x '[$$A-Z_a-z][$$0-9A-Z_a-z]*:' $(@) \
+	| sed    's/:$$//' \
+	| grep -v '__hanamade_test__$$' \
+	| while read -r normal_name \
+	; do : \
+	  ; touch normal-name/"$${normal_name}" \
+	  ; >>$(@:build/%=previous-names/%) echo normal-name/"$${normal_name}" \
+	; done
+
+
+build/%.xpp: source-link/%.cpp build/%.ypp  # MAY HAVE ADDITIONAL DEPENDENCIES based on build/%.dpp
+	@echo '- Realizing X : $(source_to_build)'
+	@ rm -f $(@:.xpp=.cpp.error) \
+	; SURROGATE="$$(mktemp)" \
+	; trap 'rm "$${SURROGATE}"' EXIT \
+	; cpp -include /usr/include/stdio.h \
+	  -D'hanamake_test(function_signature)=extern "C" void @function_signature@__hanamade_test__@($(hanamade_test_parameters))' \
+	  -D'hanamake_assert(expression, ...)=($(hanamade_assert_definition))' \
+	  $(<) \
+	| tee $(@) > "$${SURROGATE}" \
+	; grep -o '@[$$A-Z_a-z][ $$&()*,0-9:A-Z_a-z]*@__hanamade_test__@' "$${SURROGATE}" \
+	| while read -r signature \
+	; do : \
+	  ; signature="$${signature#@}" \
+	  ; signature="$${signature%@__hanamade_test__@}" \
+	  ; GNU_MAKE_SAFE_signature="$$(printf "%s" "$${signature}" \
+	                               | sed -e 's/[\t]/ /g' \
+	                                     -e 's/[ ][ ]*/ /g' \
+	                                     -e 's/( /(/g' \
+	                                     -e 's/ )/)/g' \
+	                                     -e 's/ ,/,/g' \
+	                                     -e 's/,\([^ ]\)/, \1/g' \
+	                                     -e 's/ \([&*]\)/\1/g' \
+	                                     -e 's/\([&*]\)\([(0-9A-Z_a-z]\)/\1 \2/g' \
+	                                     -e 's/\([&*]\) const\([),]\)/\1\2/g' \
+	                                     -e 's/(/@/g' \
+	                                     -e 's/)/\#/g' \
+	                               )" \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	  ; if ! test -f mangled-name/"$${GNU_MAKE_SAFE_signature}" \
+	  ; then : \
+	    ; >>$(@:.xpp=.cpp.error) echo "-------------------------------------------------------------------------------" \
+	    ; >>$(@:.xpp=.cpp.error) echo "! BUILD ERROR : hanamake_test C++ function target" \
+	    ; >>$(@:.xpp=.cpp.error) echo \
+	    ; >>$(@:.xpp=.cpp.error) echo "                  $${signature}" \
+	    ; >>$(@:.xpp=.cpp.error) echo \
+	    ; >>$(@:.xpp=.cpp.error) echo "                IS UNDEFINED" \
+	    ; >>$(@:.xpp=.cpp.error) echo \
+	    ; >>$(@:.xpp=.cpp.error) echo "                Source of error:" \
+	    ; >>$(@:.xpp=.cpp.error) echo \
+	    ; >>$(@:.xpp=.cpp.error) echo "                  '$$(realpath --relative-base=.. '$(<)')'" \
+	    ; >>$(@:.xpp=.cpp.error) echo \
+	    ; rm "$(@)" \
+	    ; exit 1 \
+	  ; fi \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	  ; sed_input_signature="$$(printf "%s" "$${signature}" | sed 's/\*/\\*/g')" \
+	  ; sed -i "s/@$${sed_input_signature}@__hanamade_test__@/$$(2>/dev/null cat mangled-name/"$${GNU_MAKE_SAFE_signature}")__hanamade_test__/g" $(@) \
+	; done
+
+
+##################
+###
+### Build Depth 4:
+###
+##################
+
+DEPENDENCY = \
+	@cpp \
+	  -D'hanamake_test(function_signature)=$(if $(filter %.dpp,$(@)),extern "C") void @function_signature@__hanamade_test__@(void)' \
+	  -D'hanamake_assert(expression, ...)=(0)' \
+	  $(<) \
+	| grep -o '@[$$A-Z_a-z][][ $$&()*,0-9:A-Z_a-z]*@__hanamade_test__@' \
+	| while read -r signature \
+	; do : \
+	  ; signature="$${signature\#@}" \
+	  ; signature="$${signature%@__hanamade_test__@}" \
+	  ; signature="$$(printf "%s" "$${signature}" | sed \
+	                  -e 's/ /\\ /g' \
+	                  -e 's/\$$/$$$$/g' \
+	                  -e 's/:/\\:/g' \
+	                  -e 's/(/\\@/g' \
+	                  -e 's/)/\\\\\#/g')" \
+	  ; >> $(@) printf " %s\n" "\\" \
+	  ; >> $(@) printf " %s"   "$(if $(filter %.d,$(@)),normal-name,mangled-name)/$${signature}" \
+	; done
+
+
+build/%.d: source-link/%.c
+	@echo '- Prescanning : $(source_to_build)'
+	@# Create additional makefile target dependencies for build/%.s files
+	@# so that if their #include "files" are updated, they will be remade
+	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.d=.s)
+	@>>  $(@) printf "\n%s:"      "$(@:.d=.s)"
+	$(DEPENDENCY)
+
+
+build/%.ypp: build/%.zpp
+	@echo '- Realizing Y : $(build_to_build)'
+	@2>/dev/null cat $(@:build/%=previous-names/%) | $(DELETE_UPDATED_NAMES)
+	@g++     $(CPPFLAGS)   $(<) -o $(@) -S -Wno-unused-parameter -Wno-unused-value -Wno-unused-variable
+	@grep '^[$$A-Z_a-z][$$0-9A-Z_a-z]*:$$' $(@) \
+	| sed 's/:$$//' \
+	| while read -r mangled_name \
+	; do : \
+	  ; if ! printf "%s" "$${mangled_name}" | grep -qx '__hex_hash__[0-9A-Fa-f][0-9A-Fa-f]*__hanamade_test__' \
+	  ; then : \
+	    ; if test "$$(printf "%s" "$${mangled_name}" | c++filt)" = "$${mangled_name}" \
+	    ; then : \
+	      ; touch normal-name/"$${mangled_name}" \
+	      ; >>$(@:build/%=previous-names/%) echo normal-name/"$${mangled_name}" \
+	    ; else : \
+	      ; > mangled-name/"$$(c++filt $${mangled_name} | sed -e 's/(/@/g' -e 's/)/\#/g')" printf "%s\n" "$${mangled_name}" \
+	      ; >>$(@:build/%=previous-names/%) echo mangled-name/"$$(c++filt $${mangled_name} | sed -e 's/(/@/g' -e 's/)/\#/g')" \
+	    ; fi \
+	  ; fi \
+	; done
+
+
+##################
+###
+### Build Depth 5:
+###
+##################
+
+build/%.zpp: source-link/%.cpp build/%.dpp
+	@echo '- Realizing Z : $(source_to_build)'
+	@ rm -f $(@:.zpp=.cpp.error)
+	@ SURROGATE="$$(mktemp)" \
+	; trap 'rm "$${SURROGATE}"' EXIT \
+	; cpp \
+	  -D'hanamake_test(function_signature)=extern "C" void @function_signature@__hanamade_test__@(void)' \
+	  -D'hanamake_assert(expression, ...)=(0)' \
+	  $(<) \
+	| tee $(@) > "$${SURROGATE}" \
+	; grep -o '@[$$A-Z_a-z][ $$&()*,0-9:A-Z_a-z]*@__hanamade_test__@' "$${SURROGATE}" \
+	| while read -r signature \
+	; do : \
+	  ; signature="$${signature#@}" \
+	  ; signature="$${signature%@__hanamade_test__@}" \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+	  ; parameters="($${signature#*(}" \
+	  ; if test "$${signature%$${parameters}}" = "$${signature}" \
+	  ; then : \
+	    ; >>$(@:.zpp=.cpp.error) echo "-------------------------------------------------------------------------------" \
+	    ; >>$(@:.zpp=.cpp.error) echo "! BUILD ERROR : hanamake_test C++ function target" \
+	    ; >>$(@:.zpp=.cpp.error) echo \
+	    ; >>$(@:.zpp=.cpp.error) echo "                  $${signature}" \
+	    ; >>$(@:.zpp=.cpp.error) echo \
+	    ; >>$(@:.zpp=.cpp.error) echo "                REQUIRES a" \
+	    ; >>$(@:.zpp=.cpp.error) echo \
+	    ; >>$(@:.zpp=.cpp.error) echo "                - parenthesized parameter type list '(type, ...)'"\
+	    ; >>$(@:.zpp=.cpp.error) echo \
+	    ; >>$(@:.zpp=.cpp.error) echo "                Source of error:" \
+	    ; >>$(@:.zpp=.cpp.error) echo \
+	    ; >>$(@:.zpp=.cpp.error) echo "                  '$$(realpath --relative-base=.. '$(<)')'" \
+	    ; >>$(@:.zpp=.cpp.error) echo \
+	    ; rm "$(@)" \
+	    ; exit 1 \
+	  ; fi \
+	  ; : ::::::::::::::::::::::::::::::::::::::::::: \
+		; sed_input_signature="$$(printf "%s" "$${signature}" | sed -e 's/\*/\\*/g')" \
+	  ; sed -i "s/@$${sed_input_signature}@__hanamade_test__@/__hex_hash__$$(printf "%s" "$${signature}" | xxd -p | tr -d '\n')__hanamade_test__/g" $(@) \
+	; done
+
+
+##################
+###
+### Build Depth 6:
+###
+##################
+
+build/%.dpp: source-link/%.cpp
+	@echo '- Prescanning : $(source_to_build)'
+	@# Create additional makefile target dependencies for build/%.spp files
+	@# so that if their #include "files" are updated, they will be remade
+	@cpp $(<) -MF $(@) -MM -MP -MT $(@:.dpp=.spp)
+	@>>  $(@) printf "\n%s"       "$(@:.dpp=.xpp):"
+	$(DEPENDENCY)
+
+
+##################
+###
+### Build Depth 7:
+###
+##################
+
+mangled-name/%: $(filter %.ypp,    $(target_files))  # These are generated by the build/%.ypp recipes
+	@#echo '- Waiting for : $(@)'
+
+normal-name/%:  $(filter %.ypp %.y,$(target_files))  # These are generated by the build/%.y
+	@#echo '- Waiting for : $(@) '                     # # # # # # # # # # # #  and build/%.ypp recipes
+
+
+-include $(filter %.d %.dpp, $(target_files))
