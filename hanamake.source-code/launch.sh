@@ -152,15 +152,12 @@ fi
 #    0 = All Clear
 #  128 = See 0hana-main.log
 
-printf '%s\n' \
+printf '%s\n%s\n%s\n%s\n' \
        '---------------' \
-       > 0hana-main.log
-
-printf '%s\n%s\n%s\n' \
        'BUILD SUCCEEDED' \
        '---------------' \
        '-- EXECUTING --' \
-| tee -a 0hana-main.log
+| tee 0hana-main.log
 
 if 2>&1 valgrind \
   --tool=memcheck \

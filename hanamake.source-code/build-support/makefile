@@ -191,7 +191,9 @@ target_directories  = $(error 'target_directories' variable is only defined in t
 # The logic here is similar to the previous_build transfer and deletion above
 #nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
 
-previous_names := $(filter %.y %.ypp,$(target_files:=build/%=previous-names/%))
+previous_names := $(filter %.y %.ypp,$(target_files:build/%=previous-names/%))
+
+.PRECIOUS: $(previous_names)
 
 $(foreach \
     previous_name, \
@@ -251,7 +253,6 @@ LINK_FLAGS :=                   $(COMMON)
 
 0hana-main: 0hana-main.c $(object_files)
 	@echo '%  Compiling  : hanamade/$(@)'
-	@echo '---------------'
 	@gcc   $(LINK_FLAGS)   $(^) -o  $(@)
 
 
@@ -268,12 +269,12 @@ formulating_script := "$(hanamake_source_code)/build-support/formulating.sh"
 build_to_build = hanamade/$(<) -> .../$(notdir $(@))
 
 build/%.o: build/%.s
-	@echo '- Mechanizing : $(build_to_build)'
+	@echo '+ Mechanizing : $(build_to_build)'
 	@gcc   -x assembler    $(<) -o  $(@) -c
 
 
 build/%.opp: build/%.spp
-	@echo '- Mechanizing : $(build_to_build)'
+	@echo '+ Mechanizing : $(build_to_build)'
 	@g++   -x assembler    $(<) -o  $(@) -c
 
 
