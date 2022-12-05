@@ -15,6 +15,24 @@ AGPL (See COPYING)
 - `valgrind`
 
 
+## Installation
+
+Until `hanamake` is added to common distribution repos, manual installation is required.
+
+To temporarily install the software in a  
+GNU / Linux / Unix (macOS) / [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) (Windows 10+) / [Cygwin](https://cygwin.com/) (Windows 7+) environment:
+
+1. Download the repo  
+2. Navigate to the repo directory
+```
+cd ~/Downloads/hanamake  # probably here
+```
+3. Add the current working directory to your PATH variable
+```
+PATH="${PATH}:$(pwd)"
+```
+
+
 ## How to use in 5 minutes
 
 	SYNOPSIS
@@ -54,7 +72,7 @@ and the test assertions tell `hanamake` to check that:
 - `add(1, 2) == 3`
 - `add(2, 1) == 3`
 
-If none of the assertions fail (none of the expressions evaluate as false),  
+If none of the assertions fail (*meaning: none of the expressions evaluate as false*),  
 then `hanamake` will notify you during the testing phase that the test for `add` passed.
 
 Otherwise, it will notify you that the test for `add` failed,  
