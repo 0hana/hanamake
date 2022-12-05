@@ -156,11 +156,11 @@ passed to `hanamake_test( )`:
   instead, you should pass a wrapper function that calls an instantiated template function:
 
 	  template <typename T>
-	  void print_generic(T u) { cout << u << endl; }
+	  void print_generic(T data) { cout << data << endl; }
 	  
-	  void print_specific(char C) { print_generic<char>(C); }
+	  void print_character(char C) { print_generic<char>(C); }
 	  
-	  hanamake_test(print_specific(char C)) { ... }
+	  hanamake_test(print_specific(char)) { ... }
 
 ---
 
