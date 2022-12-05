@@ -351,7 +351,7 @@ hanamade_assert_definition := \
         ) \
       ) \
     ) \
-    , fprintf(*__hanamade_test__log_file, "\nLine   \#  %i : (" \#expression ")\n", __LINE__) \
+    , fprintf(*__hanamade_test__log_file, "\nLine No.  %i : (" \#expression ")\n", __LINE__) \
     __VA_OPT__(, \
       fprintf(*__hanamade_test__log_file, "Context:  " __VA_ARGS__), fprintf(*__hanamade_test__log_file, "\n") \
     ) \

@@ -102,7 +102,7 @@ $(
   { \
     2>&1 \
     make \
-         -r hanamake_source_code="${hanamake_source_code}" \
+      -j -r hanamake_source_code="${hanamake_source_code}" \
       -f "${hanamake_source_code}/build-support/makefile"  \
     3>&- ; \
     echo "${?}" 1>&3 ; \
