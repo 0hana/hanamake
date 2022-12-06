@@ -246,7 +246,7 @@ $(shell rm -r PREVIOUS_previous-names)
 COMMON     := -g -Wall -Wextra -Wpedantic -Og
 CFLAGS     := -x c              $(COMMON)
 CPPFLAGS   := -x c++-cpp-output $(COMMON)
-LINK_FLAGS :=                   $(COMMON)
+LINK_FLAGS := -pthread          $(COMMON)
 
 
 ###############################################################################

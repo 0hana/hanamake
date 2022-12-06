@@ -6,6 +6,8 @@ char * left_justified
 }
 
 
+//#############################################################################
+
 /* Determine topological ordering,
    (a pseudo-topological ordering if circular dependencies are present)
 
@@ -84,6 +86,8 @@ void topological_sort_visit
 }
 
 
+//#############################################################################
+
 /* Define a recursive scanner for dependency path finding */
 
 char function_is_dependent
@@ -147,6 +151,10 @@ char __hanamade_test__is_dependent
   return 0;
 }
 
+
+void finish_print_loading();
+
+
 char every__hanamade_test__is_dependent
 (
 )
@@ -160,7 +168,10 @@ char every__hanamade_test__is_dependent
       if( ! __hanamade_test__is_dependent(C))  // if C is NOT actually dependent on its subject / target
       {
         if(result == 1)
-        { printf("\n--------------------------------------------------------------------\n"); }
+        {
+          finish_print_loading();
+          printf("\n-------------------------------------------------------------------------------\n");
+        }
         char const * const message = "\n! UNCONNECTED :  hanamake_test  independent of target:  %s";
         printf(message, left_justified(coi[coi[C].__hanamade_test__subject_index].name));
         result = 0;
@@ -171,9 +182,50 @@ char every__hanamade_test__is_dependent
 }
 
 
+//#############################################################################
+
+char loading = 0;
+pthread_t loading_dots;
+void * print_loading()
+{
+  fprintf(stderr, " ");
+  while(loading)
+  {
+    usleep(50000);
+    fprintf(stderr, "."); fflush(stderr);
+    usleep(50000);
+    fprintf(stderr, "."); fflush(stderr);
+    usleep(50000);
+    fprintf(stderr, "."); fflush(stderr);
+    usleep(50000);
+    fprintf(stderr, "\b\b\b   \b\b\b"); fflush(stderr);
+  }
+  printf("\b  [ Complete ]"); fflush(stdout);
+  return NULL;
+}
+
+void start_print_loading()
+{
+  loading = 1;
+  pthread_create(&loading_dots, NULL, print_loading, NULL);
+}
+
+void finish_print_loading()
+{
+  usleep(200000);
+  loading = 0;
+  void * rvalue;
+  pthread_join(loading_dots, &rvalue);
+}
+
+
+//#############################################################################
+
 int main(void)
 {
-  printf("\n- Screening for unconnected targets");
+  printf("\n- Screening for unconnected targets"); fflush(stdout);
+  start_print_loading();
+
   if( ! every__hanamade_test__is_dependent() )
   {
     printf
@@ -187,19 +239,24 @@ int main(void)
       "\n"
       "\n  Bridge the missing links between test(s) and target(s) to proceed."
       "\n"
-      "\n--------------------------------------------------------------------"
+      "\n-------------------------------------------------------------------------------"
       "\n"
     );
     return -1;
   }
+  finish_print_loading();
 
-
-  printf("\n- Identifying indirect dependencies");
+  printf("\n- Identifying indirect dependencies"); fflush(stdout);
+  start_print_loading();
 
   topological_sort_dependencies();
+  finish_print_loading();
 
 
-  printf("\n- Identifying (re)test requirements\n");
+//#############################################################################
+
+  printf("\n- Identifying (re)test requirements"); fflush(stdout);
+  start_print_loading();
 
   /* Check for source file updates
      (empty logs in log/%.i(pp) produced by make) */
@@ -236,6 +293,8 @@ int main(void)
     else coi[index].status = passed;
   }
 
+
+//#############################################################################
 
   /* Run topological dependency analysis
      setting non-updated objects that depend on objects
@@ -287,6 +346,10 @@ int main(void)
       }
     }
   }
+  finish_print_loading(); printf("\n");
+
+
+//#############################################################################
 
   /* Identify required testing based on direct updates (source file updates)
      OR
@@ -344,10 +407,15 @@ int main(void)
   }
 
 
+//#############################################################################
+
   /* Execute required tests and report results */
   if(tests_required_to_run || updates) printf("\n\n");
-  if(tests_required_to_run > 0) printf("- Testing Functions...\n\n");
-  else printf("- No testing required.\n");
+  printf("- Executing relevant function tests");
+  if(tests_required_to_run > 0) printf("\n\n");
+  else printf("  [ Complete ]\n");
+
+  fflush(stdout);
 
   printf("  ...");
 
@@ -385,10 +453,14 @@ int main(void)
   }
 
 
-  printf("\b\b\b   \n- Complete.\n");
+  printf("\b\b\b   \b\b\b\b\b");
+  if(tests_required_to_run) { printf("\n"); }
+  fflush(stdout);
 
 
-  printf("- Checking results for inconsistencies...\n");
+//#############################################################################
+
+  printf("- Checking for inconsistent results");
 
   char consistent = 1;  // true
 
@@ -405,6 +477,8 @@ int main(void)
       {
         if(coi[coi[index].dependency[D]].status == failed)
         {
+          /* formatting */ if(consistent) { printf("\n"); }
+
           inconsistent += 1;  // true
             consistent = 0;  // false
 
@@ -465,18 +539,10 @@ int main(void)
 
   if(consistent)
   {
-    char const * const consistent_results_message =
-    "\n  CONSISTENT -- Your code test results are consistent with each other."
-    "\n"
-    "\n                Specifically, no function whose test passed"
-    "\n                  depends upon a function whose test failed.\n"
-    ;
-
     /* DO NOT PRINT TO LOG. THE RESULTS ARE CONSISTENT. REMOVE THE LOG. */
 
     remove("inconsistent-test-results.log");
-
-    printf(consistent_results_message);
+    printf("  [ Complete ]\n");
   }
   else
   {
@@ -500,7 +566,14 @@ int main(void)
   fclose(inconsistent_test_results_log);
 
 
-  printf("\n- Valgrind Memcheck Result...\n");
+//#############################################################################
+
+
+  printf
+  ("\n###############################################################################"
+   "\n"
+   "\n  Valgrind Memcheck Result:\n\n"
+  );
 
   return 0;
 }

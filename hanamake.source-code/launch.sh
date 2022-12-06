@@ -153,6 +153,7 @@ fi
 #    0 = All Clear
 #  128 = See complete.log
 
+clear
 printf '%s\n%s\n%s\n%s\n' \
        '---------------' \
        'BUILD SUCCEEDED' \
@@ -174,17 +175,27 @@ if 2>&1 valgrind \
 && rm -r log
 then
 
-  printf '\n%s\n%s\n' \
-         '% Final Result...' \
-         '-- PASS -- No errors encountered.'
+  printf '\n%s%s\n%s\n%s\n%s\n%s%s\n' \
+         'uuuuuuuuuuuuuuuuu' \
+         'uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu' \
+         ' ' \
+         '  PASS -- All requirements were met' \
+         ' ' \
+         'nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn' \
+         'nnnnnnnnnnnnnnnnn'
 
   exit   0  # All Clear
 
 else
 
-  printf '\n%s\n%s\n' \
-         '% Final Result...' \
-         '-- FAIL -- See hanamade/complete.log' \
+  printf '\n%s%s\n%s\n%s\n%s\n%s%s\n' \
+         'uuuuuuuuuuuuuuuuu' \
+         'uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu' \
+         ' ' \
+         '  FAIL -- See hanamade/complete.log' \
+         ' ' \
+         'nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn' \
+         'nnnnnnnnnnnnnnnnn' \
   | tee -a complete.log
   find log -name '*.log' -type f -exec sh -c \
   '
