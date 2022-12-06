@@ -18,7 +18,7 @@
 #  along with hanamake. If not, see <https://www.gnu.org/licenses/>.
 
 mkdir -p hanamade/log
-touch hanamade/0hana-main.log
+touch hanamade/complete.log
 mkdir hanamade/previous-source-link
 mkdir hanamade/source-link
 

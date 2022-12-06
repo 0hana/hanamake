@@ -78,7 +78,7 @@ then `hanamake` will notify you during the testing phase that the test for `add`
 Otherwise, it will notify you that the test for `add` failed,  
 and record all failed assertions for `add` and their locations in a log file somewhere under `hanamade/log`.
 
-> **The important log file is `hanamade/0hana-main.log`**.  
+> **The important log file is `hanamade/complete.log`**.  
 > It is the union of all failure logs with additional context.
 
 For tests that fail, you can initiate `debug` mode via `hanamake debug` to re-run the failed tests in `gdb` with the failed assertions marked, and move through the logic step by step to help isolate the cause.

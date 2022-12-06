@@ -258,7 +258,7 @@ LINK_FLAGS :=                   $(COMMON)
 
 formulating_script := "$(hanamake_source_code)/build-support/formulating.sh"
 
-0hana-main.c: $(filter %i %.ipp, $(target_files))
+0hana-main.c: $(target_files)
 	@echo '---------------'
 	@echo '+ Formulating : hanamade/$(@)'
 	@sh    $(formulating_script)    $(@)
@@ -269,12 +269,12 @@ formulating_script := "$(hanamake_source_code)/build-support/formulating.sh"
 build_to_build = hanamade/$(<) -> .../$(notdir $(@))
 
 build/%.o: build/%.s
-	@echo '+ Mechanizing : $(build_to_build)'
+	@echo '- Mechanizing : $(build_to_build)'
 	@gcc   -x assembler    $(<) -o  $(@) -c
 
 
 build/%.opp: build/%.spp
-	@echo '+ Mechanizing : $(build_to_build)'
+	@echo '- Mechanizing : $(build_to_build)'
 	@g++   -x assembler    $(<) -o  $(@) -c
 
 
@@ -413,7 +413,7 @@ build/%.y: source-link/%.c build/%.d | $(previous_names)
 	  -D'hanamake_test(function_name)=void @function_name@__hanamade_test__@(void)' \
 	  -D'hanamake_assert(expression, ...)=(0)' \
 	  $(<) \
-	| grep -o '@[$$A-Z_a-z][ $$&()*,0-9:<>A-Z_a-z]*@__hanamade_test__@' \
+	| grep -o '@[$$A-Z_a-z][][ $$&()*,0-9:<>A-Z_a-z]*@__hanamade_test__@' \
 	| while read -r name \
 	; do : \
 	  ; name="$${name#@}" \

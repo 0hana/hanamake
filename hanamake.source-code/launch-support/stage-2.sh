@@ -225,10 +225,10 @@ validate()
   if test "${mode}" = debug
   then
 
-    if ! test -f hanamade/0hana-main.log
+    if ! test -f hanamade/complete.log
     then
 
-      issue "no 'hanamade/0hana-main.log' -- nothing for 'debug' to target"
+      issue "no 'hanamade/complete.log' -- nothing for 'debug' to target"
 
       exit 9
 

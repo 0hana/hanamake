@@ -159,7 +159,9 @@ char every__hanamade_test__is_dependent
     {
       if( ! __hanamade_test__is_dependent(C))  // if C is NOT actually dependent on its subject / target
       {
-        char const * const message = "\n! UNCONNECTED :  (test)  is independent of target  %s";
+        if(result == 1)
+        { printf("\n--------------------------------------------------------------------\n"); }
+        char const * const message = "\n! UNCONNECTED :  hanamake_test  independent of target:  %s";
         printf(message, left_justified(coi[coi[C].__hanamade_test__subject_index].name));
         result = 0;
       }
@@ -171,27 +173,33 @@ char every__hanamade_test__is_dependent
 
 int main(void)
 {
-  printf("\n- Screening for unconnected targets...");
+  printf("\n- Screening for unconnected targets");
   if( ! every__hanamade_test__is_dependent() )
   {
     printf
     ( "\n"
-      "\n  No dependency path was detected for the above functions to their"
-      "\n  named targets, suggesting an error is present in your logic."
+      "\n  Surprisingly, the tests for the '! UNCONNECTED :' functions"
+      "\n  listed above were found to be independent of their targets."
+      "\n"
+      "\n  This means that, unless the targets are somehow invoked via"
+      "\n  function pointers, the tests for the above functions are"
+      "\n  not actually testing them."
       "\n"
       "\n  Bridge the missing links between test(s) and target(s) to proceed."
+      "\n"
+      "\n--------------------------------------------------------------------"
       "\n"
     );
     return -1;
   }
 
 
-  printf("\n- Identifying indirect dependencies...");
+  printf("\n- Identifying indirect dependencies");
 
   topological_sort_dependencies();
 
 
-  printf("\n- Identifying (re)test requirements...\n");
+  printf("\n- Identifying (re)test requirements\n");
 
   /* Check for source file updates
      (empty logs in log/%.i(pp) produced by make) */

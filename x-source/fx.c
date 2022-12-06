@@ -1,7 +1,8 @@
 char fy();
 char fx() { return fy() - 1; }
+char fw() { return fx(); }
 
-hanamake_test(fx) { hanamake_assert(fx() == 'X'); }
+hanamake_test(fx) { hanamake_assert(fw() == 'X'); }
 
 
 int plus1(int);
