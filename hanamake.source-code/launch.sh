@@ -197,7 +197,7 @@ else
          'nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn' \
          'nnnnnnnnnnnnnnnnn' \
   | tee -a complete.log
-  find log -name '*.log' -type f -exec sh -c \
+  find log -name '*__hanamade_test__.log' -type f -exec sh -c \
   '
   >> complete.log cat "${@}"
   ' \

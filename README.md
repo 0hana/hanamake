@@ -41,11 +41,10 @@ PATH="${PATH}:$(pwd)"
 	       | hanamake debug [ <function-name> ... ]
 	       | hanamake clean
 
-> **WARNING:** `hanamake` is currently in alpha development.  
+> **WARNING:** `hanamake` is currently in beta.  
 > Some features and functionality are incomplete.
 >
-> The only way to reliably use `hanamake` testing during alpha-development is with `hanamake clean` between each `hanamake` invokation.  
-> Unfortunately, this prevents `hanamake debug` use.
+> `hanamake debug` mode is in development.
 
 In all `.c` and `.cpp` files below the directories specified with the `-s` option (default: `source`),  
  `hanamake` will look for function names enclosed with: `hanamake_test( )` and check  
