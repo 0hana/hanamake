@@ -287,7 +287,9 @@ build/%.opp: build/%.spp
 # In the meantime, remove and remake build/%.i(pp) directories per source update
 
 remove_and_remake_script = \
-  echo '- Subdividing : $(build_to_build)'; rm -rf $(@) && mkdir $(@)
+  echo '- Subdividing : $(build_to_build)' \
+  ; rm -r -f $(@) $(@:build/%=log/%) \
+  ; mkdir -p $(@) $(@:build/%=log/%)
 
 # Split build/%.s(pp) files into partial assembly files under build/%.i(pp)
 
@@ -303,11 +305,9 @@ csplit_script = \
   ; do function_name="$$(head -n 1 $${csplit_file} | sed 's/://')" \
   \
     ; mv $${csplit_file} $(@)/$${function_name} \
-    ; if grep -q     "$${function_name}, @function" \
-    $(basename $(@))$(if $(filter %.i, $(@)),.s,.spp) \
-    ; then mkdir -p $(@:build/%=log/%) \
-      &&   touch    $(@:build/%=log/%)/$${function_name}.log \
-    ; else rm       $(@)/$${function_name} \
+    ; if grep -q  "$${function_name}, @function" $(basename $(@))$(if $(filter %.i, $(@)),.s,.spp) \
+    ; then touch $(@:build/%=log/%)/$${function_name}.log \
+    ; else rm    $(@)/$${function_name} \
     ; fi \
   \
   ; done
@@ -332,7 +332,7 @@ hanamade_test_parameters := \
 hanamade_assert_definition := \
   (expression) \
   ? \
-  ( ((void)((*__hanamade_test__log_file == NULL) && remove(__hanamade_test__log_path))), 1 ) \
+  ( 1 ) \
   : \
   ( \
     ( \

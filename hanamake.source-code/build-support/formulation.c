@@ -259,59 +259,52 @@ int main(void)
   start_print_loading();
 
   /* Check for source file updates
-     (empty logs in log/%.i(pp) produced by make) */
+     (empty logs in log/%.i(pp) produced by make)
 
+     But first, mark no-test objects for deletion
+     (to be deleted after all tests have run) */
+
+  char marked_for_deletion[code_objects];
+  for(size_t index = 0; index < code_objects; index++) { marked_for_deletion[index] = 1; }
+  for(size_t index = 0; index < code_objects; index++)
   {
-    /* First, make sure we don't remove log_paths
-       that might be subject to testing, so mark
-       the code_objects that don't have a test */
-
-    char marked_for_deletion[code_objects];
-    for(size_t index = 0; index < code_objects; index++) { marked_for_deletion[index] = +1; }
-    for(size_t index = 0; index < code_objects; index++)
+    if(coi[index].__hanamade_test__)
     {
-      if(coi[index].__hanamade_test__)
-      {
-        marked_for_deletion[index] = 0;
-        marked_for_deletion[coi[index].__hanamade_test__subject_index] = 0;
-      }
+      marked_for_deletion[index] = 0;
+      marked_for_deletion[coi[index].__hanamade_test__subject_index] = 0;
+    }
+  }
+
+  /* Now check for the source file updates */
+
+  for(size_t index = 0; index < code_objects; index++)
+  {
+    /* Log file presence indicates either source update or
+       prior test failure */
+
+    if((coi[index].log_file = fopen(coi[index].log_path, "r")))
+    {
+      /* Getting an End Of File (EOF) value at the beginning of
+         the file means its empty,
+         and the corresponding source file was updated
+
+         Getting any other value means the file is non-empty,
+         indicating a prior testing failure
+         (which is the default assumption, so no action is taken) */
+
+      if(fgetc(coi[index].log_file) == EOF) coi[index].status = updated;
+
+      /* Close and reassign NULL to log_file
+         to avoid interfering with testing,
+         which uses a non-NULL  log_file value to detect a failed test */
+
+      fclose(coi[index].log_file);
+      coi[index].log_file = NULL;
     }
 
-    /* Now we can proceed */
+    /* No log file means no update nor failure -- an implicit pass */
 
-    for(size_t index = 0; index < code_objects; index++)
-    {
-      /* Log file presence indicates either source update or
-         prior test failure */
-
-      if((coi[index].log_file = fopen(coi[index].log_path, "r")))
-      {
-        /* Getting an End Of File (EOF) value at the beginning of
-           the file means its empty,
-           and the corresponding source file was updated
-
-           Getting any other value means the file is non-empty,
-           indicating a prior testing failure
-           (which is the default assumption, so no action is taken) */
-
-        if(fgetc(coi[index].log_file) == EOF) coi[index].status = updated;
-
-        /* Close and reassign NULL to log_file
-           to avoid interfering with testing,
-           which uses a non-NULL  log_file value to detect a failed test */
-
-        fclose(coi[index].log_file);
-        coi[index].log_file = NULL;
-
-        if(marked_for_deletion[index])
-        { remove(coi[index].log_path); }
-      }
-
-
-      /* No log file means no update nor failure -- an implicit pass */
-
-      else coi[index].status = passed;
-    }
+    else coi[index].status = passed;
   }
 
 
@@ -484,10 +477,9 @@ int main(void)
 
             coi[index].status                                 = passed;
         coi[coi[index].__hanamade_test__subject_index].status = passed;
-        remove
-        (
-          coi[coi[index].__hanamade_test__subject_index].log_path
-        );
+
+        marked_for_deletion[index]                                     = 1;
+        marked_for_deletion[coi[index].__hanamade_test__subject_index] = 1;
       }
     }
   }
@@ -496,6 +488,14 @@ int main(void)
   printf("\b\b\b   \b\b\b\b\b");
   if(tests_required_to_run) { printf("\n"); }
   fflush(stdout);
+
+  for(size_t index = 0; index < code_objects; index++)
+  {
+    if(marked_for_deletion[index])
+    {
+      remove(coi[index].log_path);
+    }
+  }
 
 
 //#############################################################################

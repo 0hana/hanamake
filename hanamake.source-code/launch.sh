@@ -153,7 +153,6 @@ fi
 #    0 = All Clear
 #  128 = See complete.log
 
-clear
 printf '%s\n%s\n%s\n%s\n' \
        '---------------' \
        'BUILD SUCCEEDED' \
