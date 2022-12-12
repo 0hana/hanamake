@@ -170,8 +170,7 @@ if 2>&1 valgrind \
 && ! grep -q '^! UNCONNECTED :'                  complete.log \
 && ! grep -q '\[ FAILED \]'                      complete.log \
 &&   grep -q '^==[0-9][0-9]*== ERROR SUMMARY: 0' complete.log \
-&& rm complete.log \
-&& rm -r log
+&& rm complete.log
 then
 
   printf '\n%s%s\n%s\n%s\n%s\n%s%s\n' \

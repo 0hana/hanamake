@@ -341,8 +341,8 @@ hanamade_assert_definition := \
         (*__hanamade_test__log_file == NULL) && \
         (*__hanamade_test__log_file = fopen(__hanamade_test__log_path, "w")) && \
         (fprintf \
-         ( *__hanamade_test__log_file, \
-           "-------------------------------------------------------------------------------\n" \
+         ( *__hanamade_test__log_file \
+         , "-------------------------------------------------------------------------------\n" \
            __FILE__ "\n"\
            "Failed target id:  %s\n" \
            "Failed assert(s):\n" \
