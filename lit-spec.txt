@@ -1,0 +1,94 @@
+#  Copyright (C) 2022 Hanami Zero
+#
+#  This file is part of lit,
+#  a C and C++ development utility.
+#
+#  lit is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License --
+#  the superset of version 3 of the GNU General Public License --
+#  as published by the Free Software Foundation.
+#
+#  lit is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty
+#  of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with lit. If not, see <https://www.gnu.org/licenses/>.
+
+#uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
+# Lit Specification Draft
+#nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+
+SYNOPSIS
+
+  usage:  lit [ continuous ] [ use <source> ... ]
+       |  lit debug [ <function-name> ... ]
+       |  lit clean
+
+  #uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
+  # Execution modes and stages
+  #nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+
+  `lit` execution is composed of 3 operating modes (clean, debug, execute)
+  and several support stages.
+
+  First and foremost, the operating mode and validity of the command are checked
+  during stage-1, preventing the initiation of any further execution on an
+  invalid command.
+
+    #uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
+    # `clean` mode
+    #nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+
+    The simplest mode is `clean` mode, provided entirely for the convenience
+    (and safety) of beginners -- it is just a wrapper for the command:
+
+      rm -r lit.data
+
+    so that lit users do not accidentally execute `rm -r something-else`
+
+    (I've seen it happen, and can imagine doing it myself)
+
+
+    #uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
+    # `debug` mode
+    #nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+
+    The next mode in ascending complexity is `debug` mode, which initiates
+    1 of 2 possible tasks, depending on the parameters provided in the command,
+    and the content of the `lit.data` directory generated during `execute` mode.
+
+    The 1st task is only initiated when `debug` mode is initiated without any
+    additional parameters (i.e. `lit debug`) and the contents of `lit.data`
+    indicate that the prior call to `execute` mode failed to reach completion.
+
+      If, for example, the build stage of `execute` mode
+      encountered a compilation error, then issuing `lit debug` would display
+      information about the error.
+
+    The 2nd task is only initated when the contents of `lit.data` indicate that
+    `execute` mode completed, but that some user-defined functions failed their
+    respective litmus tests, and initiates the GNU debugger on only those
+    user-defined litmus-tests for such functions.
+
+
+    #uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu
+    # `execute` mode
+    #nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn
+
+    The most complex mode is `execute` mode, which has several responsibilities
+    and execution stages, and serves the primary function of lit:
+
+      litmus testing code.
+
+    First, all specified C and C++ code sources (files and directories) are
+    linked-to under the directory `lit.data/linked-source`.
+
+    Next, if the directory `lit.data/linked-source-memory` exists, then its
+    contents are compared against those linked to by linked-source
+
+Scheduled to ...
+- Create : <source> object files
+- Remove : <source> object files
+- Update : <source> object files
